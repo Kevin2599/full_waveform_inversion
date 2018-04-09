@@ -35,9 +35,9 @@ import pickle
 # Specify parameters:
 datadir = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
 real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
-green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt']  #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"]
-inversion_type = "single_force" # Inversion type can be: full_mt, DC or single_force. (if single force, greens functions must be 3 components rather than 6)
+inversion_type = "full_mt" # Inversion type can be: full_mt, DC or single_force. (if single force, greens functions must be 3 components rather than 6)
 comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
 manual_indices_time_shift = [2,1,0]
@@ -229,7 +229,7 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     Comparison metrics can be: VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient)."""
     
     # 1. Set up data stores to write inversion results to:
-    MTs = np.zeros((len(real_data_array[:,0]), num_samples), dtype=float)
+    MTs = np.zeros((len(green_func_array[0,:,0]), num_samples), dtype=float)
     VRs = np.zeros(num_samples, dtype=float)
     CCs = np.zeros(num_samples, dtype=float)
     PCCs = np.zeros(num_samples, dtype=float)
@@ -408,6 +408,9 @@ if __name__ == "__main__":
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
     num_samples = 1000 #1000000
+    
+    print np.shape(green_func_array)
+    
     MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric)
     np.savetxt("MTs.txt", MTs)
     np.savetxt("MTp.txt", MTp)
