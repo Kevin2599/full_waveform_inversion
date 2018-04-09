@@ -38,6 +38,7 @@ real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_R
 green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt']  #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"]
 inversion_type = "full_mt" # Inversion type can be: full_mt, DC or single_force. (if single force, greens functions must be 3 components rather than 6)
+num_samples = 1000 #1000000 # Number of samples to perform Monte Carlo over
 comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
 manual_indices_time_shift = [2,1,0]
@@ -407,10 +408,6 @@ if __name__ == "__main__":
     plot_specific_forward_model_result(real_data_array, synth_forward_model_result_array, data_labels, plot_title="Initial theoretical inversion solution")
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
-    num_samples = 1000 #1000000
-    
-    print np.shape(green_func_array)
-    
     MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric)
     np.savetxt("MTs.txt", MTs)
     np.savetxt("MTp.txt", MTp)
