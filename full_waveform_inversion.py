@@ -1,4 +1,4 @@
-#!/Users/tomhudson/anaconda/bin/python
+#!python
 
 #-----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -18,6 +18,7 @@
 # Currently performs variance reduction on normalised data (as there is an issue with amplitude scaling when using DC events)
 
 # Notes to do:
+# Get output to output in suitable format for using my plotting scripts (like MTINV output)
 # Check that sampling is unbiased - It is currently non biased with regards to points on a sphere, but is baised with regards to sampling of Lune coords
 
 #-----------------------------------------------------------------------------------------------------------------------------------------
@@ -27,6 +28,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy.linalg import eigh # For calculating eigenvalues and eigenvectors of symetric (Hermitian) matrices
 import scipy.signal as signal # For cross-correlation calculations
+import os,sys
+from obspy import UTCDateTime
+import pickle
 
 # Specify parameters:
 datadir = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
@@ -37,6 +41,7 @@ inversion_type = "single_force" # Inversion type can be: full_mt, DC or single_f
 comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
 manual_indices_time_shift = [2,1,0]
+nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 
 
 
@@ -278,6 +283,102 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     
     return MTs, MTp
     
+def get_event_uid_and_station_data_MTFIT_FORMAT_from_nonlinloc_hyp_file(nlloc_hyp_filename):
+    """Function to get event uid and station data (station name, azimuth, takeoff angle, polarity) from nonlinloc hyp file. This data is required for writing to file for plotting like MTFIT data."""
+    # Array shape is (num_stations, 4) in the order: station name, azimuth, takeoff angle, polarity
+    
+    # Get event UID:
+    # Get event origin times:
+    # Get event time from NLLoc file for basal icequake:
+    os.system("grep 'GEOGRAPHIC' "+nlloc_hyp_filename+" > ./tmp_event_GEO_line.txt")
+    GEO_line = np.loadtxt("./tmp_event_GEO_line.txt", dtype=str)
+    event_origin_time = UTCDateTime(GEO_line[2]+GEO_line[3]+GEO_line[4]+GEO_line[5]+GEO_line[6]+GEO_line[7])
+    # And remove temp files:
+    os.system("rm ./tmp_*GEO_line.txt")
+    uid = event_origin_time.strftime("%Y%m%d%H%M%S%f")
+    
+    # And get station arrival times and azimuth+takeoff angles for each phase, for event:
+    os.system("awk '/PHASE ID/{f=1;next} /END_PHASE/{f=0} f' "+nlloc_hyp_filename+" > ./tmp_event_PHASE_lines.txt") # Get phase info and write to tmp file
+    PHASE_lines = np.loadtxt("./tmp_event_PHASE_lines.txt", dtype=str) # And import phase lines as np str array
+    arrival_times_dict = {} # Create empty dictionary to store data (with keys: event_origin_time, station_arrivals {station {station_P_arrival, station_S_arrival}}})
+    arrival_times_dict['event_origin_time'] = event_origin_time
+    arrival_times_dict['station_arrival_times'] = {}
+    arrival_times_dict['azi_takeoff_angles'] = {}
+    # Loop over stations:
+    for i in range(len(PHASE_lines[:,0])):
+        station = PHASE_lines[i, 0]
+        station_current_phase_arrival = UTCDateTime(PHASE_lines[i,6]+PHASE_lines[i,7]+PHASE_lines[i,8])
+        station_current_azimuth_event_to_sta = float(PHASE_lines[i,22])
+        if station_current_azimuth_event_to_sta > 180.:
+            station_current_azimuth_sta_to_event = 180. - (360. - station_current_azimuth_event_to_sta)
+        elif station_current_azimuth_event_to_sta <= 180.:
+            station_current_azimuth_sta_to_event = 360. - (180. - station_current_azimuth_event_to_sta)
+        station_current_toa_event_to_sta = float(PHASE_lines[i,24])
+        station_current_toa_sta_inclination = 180. - station_current_toa_event_to_sta
+        # See if station entry exists, and if does, write arrival to array, otherwise, create entry and write data to file:
+        # For station arrival times:
+        try:
+            arrival_times_dict['station_arrival_times'][station]
+        except KeyError:
+            # If entry didnt exist, create it and fill:
+            if PHASE_lines[i, 4] == "P":
+                arrival_times_dict['station_arrival_times'][station] = {}
+                arrival_times_dict['station_arrival_times'][station]["P"] = station_current_phase_arrival
+            elif PHASE_lines[i, 4] == "S":
+                arrival_times_dict['station_arrival_times'][station] = {}
+                arrival_times_dict['station_arrival_times'][station]["S"] = station_current_phase_arrival
+        # And if entry did exist:
+        else:
+            if PHASE_lines[i, 4] == "P":
+                arrival_times_dict['station_arrival_times'][station]["P"] = station_current_phase_arrival
+            elif PHASE_lines[i, 4] == "S":
+                arrival_times_dict['station_arrival_times'][station]["S"] = station_current_phase_arrival
+        # And for azimuth and takeoff angle:
+        try:
+            arrival_times_dict['azi_takeoff_angles'][station]
+        except KeyError:
+            # If entry didnt exist, create it and fill:
+            if PHASE_lines[i, 4] == "P":
+                arrival_times_dict['azi_takeoff_angles'][station] = {}
+                arrival_times_dict['azi_takeoff_angles'][station]["P_azimuth_sta_to_event"] = station_current_azimuth_sta_to_event
+                arrival_times_dict['azi_takeoff_angles'][station]["P_toa_sta_inclination"] = station_current_toa_sta_inclination
+        # And if entry did exist:
+        else:
+            if PHASE_lines[i, 4] == "P":
+                arrival_times_dict['azi_takeoff_angles'][station]["P_azimuth_sta_to_event"] = station_current_azimuth_sta_to_event
+                arrival_times_dict['azi_takeoff_angles'][station]["P_toa_sta_inclination"] = station_current_toa_sta_inclination  
+    
+    # And clean up:
+    os.system("rm ./tmp*PHASE_lines.txt")
+    
+    # And create stations array:
+    stations = []
+    for i in range(len(arrival_times_dict['azi_takeoff_angles'])):
+        station = arrival_times_dict['azi_takeoff_angles'].keys()[i]
+        azi = arrival_times_dict['azi_takeoff_angles'][station]["P_azimuth_sta_to_event"]
+        toa = arrival_times_dict['azi_takeoff_angles'][station]["P_toa_sta_inclination"]
+        pol = 0 # Assign zero polarity, as not needed for full waveform
+        stations.append([np.array([station], dtype=str), np.array([[azi]], dtype=float), np.array([[toa]], dtype=float), np.array([[pol]], dtype=int)])
+    stations = np.array(stations) # HERE!!! (need to find out what type of object stations is!)
+    
+    return uid, stations
+    
+def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type):
+    """Function to save data to MTFIT style file, containing arrays of uid, MTs (array of 6xn for possible MT solutions), MTp (array of length n storing probabilities of each solution) and stations (station name, azimuth, takeoff angle, polarity (set to zero here)).
+    Output is a pickled file containing a dictionary of uid, stations, MTs and MTp."""
+    # Get uid and stations data:
+    uid, stations = get_event_uid_and_station_data_MTFIT_FORMAT_from_nonlinloc_hyp_file(nlloc_hyp_filename)
+    # Write all data to output dict:
+    out_dict = {}
+    out_dict["MTs"] = MTs
+    out_dict["MTp"] = MTp
+    out_dict["uid"] = uid
+    out_dict["stations"] = stations
+    # And save to file:
+    out_fname = uid+"_FW_"+inversion_type+".pkl"
+    print "Saving FW inversion to file:", out_fname
+    pickle.dump(out_dict, open(out_fname, "wb"))
+
 
 # ------------------- End of defining various functions used in script -------------------
 
@@ -313,8 +414,8 @@ if __name__ == "__main__":
     plot_specific_forward_model_result(real_data_array, synth_forward_model_most_likely_result_array, data_labels, plot_title="Most likely Monte Carlo sampled solution")
     print "Most likely solution:", MTs[:,np.where(MTp==np.max(MTp))[0][0]]
     
-    
-
+    # And save data to MTFIT style file:
+    save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type) # Saves pickled dictionary containing data from inversion
 
 
 
