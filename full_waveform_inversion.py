@@ -271,6 +271,9 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
         VRs[i] = VR_curr_sample
         CCs[i] = ncc_max_curr_sample
         PCCs[i] = PCC_curr_sample
+        
+        if i % 100000 == 0:
+            print "Processed for",i,"samples out of",num_samples,"samples"
     
     # 7. Get P(model|data):
     p_data = np.sum(p_model*VRs) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
