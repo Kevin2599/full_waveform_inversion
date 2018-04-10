@@ -35,9 +35,9 @@ import pickle
 # Specify parameters:
 datadir = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
 real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
-green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt']  #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"]
-inversion_type = "full_mt" # Inversion type can be: full_mt, DC or single_force. (if single force, greens functions must be 3 components rather than 6)
+green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt']  #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"] # Format of these labels must be of the form "station_name, comp" with the comma
+inversion_type = "single_force" # Inversion type can be: full_mt, DC or single_force. (if single force, greens functions must be 3 components rather than 6)
 num_samples = 1000 #1000000 # Number of samples to perform Monte Carlo over
 comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
@@ -133,7 +133,7 @@ def plot_specific_forward_model_result(real_data_array, synth_forward_model_resu
     fig, axarr = plt.subplots(len(real_data_array[:,0]), sharex=True)
     for i in range(len(axarr)):
         axarr[i].plot(real_data_array[i,:],c='k', alpha=0.6) # Plot real data
-        axarr[i].plot(synth_forward_model_result_array[i,:],c='r',linestyle="--", alpha=0.6) # Plot 
+        axarr[i].plot(synth_forward_model_result_array[i,:],c='r',linestyle="--", alpha=0.6) # Plot synth data 
         axarr[i].set_title(data_labels[i])
     plt.suptitle(plot_title)
     plt.show()
@@ -382,7 +382,21 @@ def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type):
     out_fname = uid+"_FW_"+inversion_type+".pkl"
     print "Saving FW inversion to file:", out_fname
     pickle.dump(out_dict, open(out_fname, "wb"))
-
+    
+def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labels, nlloc_hyp_filename, inversion_type):
+    """Function to save specific waveforms to dictionary format file."""
+    # Put waveform data in dict format:
+    out_wf_dict = {}
+    for i in range(len(data_labels)):
+        out_wf_dict[data_labels[i]] = {}
+        out_wf_dict[data_labels[i]]["real_wf"] = real_data_array[i,:]
+        out_wf_dict[data_labels[i]]["synth_wf"] = synth_data_array[i,:]
+    # Get uid for filename:
+    uid, stations = get_event_uid_and_station_data_MTFIT_FORMAT_from_nonlinloc_hyp_file(nlloc_hyp_filename)
+    # And write to file:
+    out_fname = uid+"_FW_"+inversion_type+".wfs"
+    print "Saving FW inversion to file:", out_fname
+    pickle.dump(out_wf_dict, open(out_fname, "wb"))
 
 # ------------------- End of defining various functions used in script -------------------
 
@@ -419,8 +433,11 @@ if __name__ == "__main__":
     
     # And save data to MTFIT style file:
     save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type) # Saves pickled dictionary containing data from inversion
+    # And save most likely solution and real data waveforms to file:
+    synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
+    save_specific_waveforms_to_file(real_data_array, synth_forward_model_most_likely_result_array, data_labels, nlloc_hyp_filename, inversion_type)
 
-
+    print "Finished"
 
 
 
