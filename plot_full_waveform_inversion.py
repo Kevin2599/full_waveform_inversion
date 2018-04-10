@@ -257,7 +257,24 @@ def plot_nodal_planes_for_given_NED_sixMT(ax, MT_for_nodal_planes, bounding_circ
     
     return ax
 
-def plot_full_waveform_result_beachball_DC(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, unconstrained_vs_DC_switch="unconstrained"):
+def plot_nodal_planes_for_given_NED_sixMT(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8):
+    """Function for plotting single force vector on beachball style plot."""
+    
+    # normalise:
+    single_force_vector_to_plot = single_force_vector_to_plot/np.max(np.absolute(single_force_vector_to_plot))
+    
+    # Convert 3D vector to 2D plane coords:
+    x = np.array([single_force_vector_to_plot[1]])
+    y = np.array([single_force_vector_to_plot[0]])
+    z = np.array([single_force_vector_to_plot[2]])
+    X, Y = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
+    
+    # And plot:
+    ax.quiver([0.],[0.],Y,X,color="#0B7EB3",alpha=alpha_single_force_vector, angles='xy', scale_units='xy', scale=1)
+    
+    return ax
+
+def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained"):
     """Function to plot full waveform DC constrained inversion result on sphere, then project into 2D using an equal area projection.
     Input MTs are np array of NED MTs in shape [6,n] where n is number of solutions. Also takes optional radiation_pattern_MT, which it will plot a radiation pattern for.
         Note: x and y coordinates switched for plotting to take from NE to EN
@@ -272,38 +289,46 @@ def plot_full_waveform_result_beachball_DC(MTs_to_plot, wfs_dict, radiation_patt
     ax.set_ylabel("N")
     ax.set_xlim(-3.5,3.5)
     ax.set_ylim(-3.5,3.5)
-    #plt.plot([-2.,2.],[0.,0.],c="k", alpha=0.5)
-    #plt.plot([0.,0.],[-2.,2.],c="k", alpha=0.5)
     plt.axis('off')
     
     # Setup bounding circle and create bounding path from circle:
     ax, bounding_circle_path = create_and_plot_bounding_circle_and_path(ax)
     
-    # Plot radiation pattern if provided with radiation pattern MT to plot:
-    if not len(radiation_pattern_MT)==0:
-        plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch=lower_upper_hemi_switch, radiation_MT_phase="P", unconstrained_vs_DC_switch="DC") # Plot radiation pattern
     
-    # Plot MT nodal plane solutions:
-    # Get samples to plot:
-    # IF single sample, plot most likely (assocaited with radiation pattern):
-    if num_MT_solutions_to_plot == 1:
+    # Plot radiation pattern and nodal planes if inversion_type is DC or unconstrained:
+    if inversion_type == "DC" or inversion_type == "unconstrained":
+        unconstrained_vs_DC_switch = inversion_type
+        
+        # Plot radiation pattern if provided with radiation pattern MT to plot:
         if not len(radiation_pattern_MT)==0:
-            curr_MT_to_plot = radiation_pattern_MT
-            ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3)
-    # else if number of samples > 1:
-    else:
-        if len(MTs_to_plot[0,:]) > num_MT_solutions_to_plot:
-            sample_indices = random.sample(range(len(MTs_to_plot[0,:])),num_MT_solutions_to_plot) # Get random sample of MT solutions to plot
+            plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch=lower_upper_hemi_switch, radiation_MT_phase="P", unconstrained_vs_DC_switch=unconstrained_vs_DC_switch) # Plot radiation pattern
+    
+        # Plot MT nodal plane solutions:
+        # Get samples to plot:
+        # IF single sample, plot most likely (assocaited with radiation pattern):
+        if num_MT_solutions_to_plot == 1:
+            if not len(radiation_pattern_MT)==0:
+                curr_MT_to_plot = radiation_pattern_MT
+                ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3)
+        # else if number of samples > 1:
         else:
-            sample_indices = range(len(MTs_to_plot[0,:]))
-        # Loop over MT solutions, plotting nodal planes:
-        for i in sample_indices:
-            # Get current mt:
-            curr_MT_to_plot = MTs_to_plot[:,i]
-            # And try to plot current MT nodal planes:
-            print "Attempted to plot solution", i
-            ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3)
-            
+            if len(MTs_to_plot[0,:]) > num_MT_solutions_to_plot:
+                sample_indices = random.sample(range(len(MTs_to_plot[0,:])),num_MT_solutions_to_plot) # Get random sample of MT solutions to plot
+            else:
+                sample_indices = range(len(MTs_to_plot[0,:]))
+            # Loop over MT solutions, plotting nodal planes:
+            for i in sample_indices:
+                # Get current mt:
+                curr_MT_to_plot = MTs_to_plot[:,i]
+                # And try to plot current MT nodal planes:
+                print "Attempted to plot solution", i
+                ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3)
+    
+    # Or plot single force vector if inversion_type is single_force:
+    elif inversion_type == "single_force":
+        single_force_vector_to_plot = radiation_pattern_MT
+        ax = plot_nodal_planes_for_given_NED_sixMT(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8)
+                
     # Plot stations (if provided):
     if not len(stations) == 0:
         # Loop over stations:
@@ -368,15 +393,14 @@ def plot_full_waveform_result_beachball_DC(MTs_to_plot, wfs_dict, radiation_patt
             inset_ax_tmp.plot(synth_wf_current_stat,c='#E83313',linestyle="--", alpha=0.6) # Plot synth data
             plt.axis('off')
             
-            
-
     # And save figure if given figure filename:
     if not len(figure_filename) == 0:
         plt.savefig(figure_filename, dpi=600)
     else:
         plt.show()
         
-        
+
+       
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
     
@@ -385,8 +409,9 @@ if __name__ == "__main__":
 
     # Specify MT data dir (containing MTINV solutions):
     #MT_data_filenames = glob.glob("./python_FW_outputs/*FW_DC.pkl")
-    MT_data_filename = "./python_FW_outputs/20171222022435216400_FW_DC.pkl"
-    MT_waveforms_data_filename = "./python_FW_outputs/20171222022435216400_FW_DC.wfs"
+    MT_data_filename = "./python_FW_outputs/20171222022435216400_FW_single_force.pkl"
+    MT_waveforms_data_filename = "./python_FW_outputs/20171222022435216400_FW_single_force.wfs"
+    inversion_type = "single_force" # can be: unconstrained, DC or single_force
 
     print "Processing data for:", MT_data_filename
 
@@ -394,11 +419,15 @@ if __name__ == "__main__":
     uid, MTp, MTs, stations = load_MT_dict_from_file(MT_data_filename)
     wfs_dict = load_MT_waveforms_dict_from_file(MT_waveforms_data_filename)
     
+    
     # Get most likely solution:
     index_MT_max_prob = np.argmax(MTp) # Index of most likely MT solution
     MT_max_prob = MTs[:,index_MT_max_prob]
-    # And get full MT matrix:
-    full_MT_max_prob = get_full_MT_array(MT_max_prob)
+    if not inversion_type == "single_force":
+        # And get full MT matrix:
+        full_MT_max_prob = get_full_MT_array(MT_max_prob)   
+    else:
+        full_MT_max_prob = MT_max_prob
     print "Full MT (max prob.):"
     print full_MT_max_prob
     print "(For plotting radiation pattern)"
@@ -407,7 +436,7 @@ if __name__ == "__main__":
     MTs_to_plot = full_MT_max_prob #MTs_max_gau_loc
     radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
     figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+".png"
-    plot_full_waveform_result_beachball_DC(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, unconstrained_vs_DC_switch="DC")
+    plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type)
     
     print "Finished processing unconstrained inversion data for:", MT_data_filename
     

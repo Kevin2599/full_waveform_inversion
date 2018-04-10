@@ -423,8 +423,6 @@ if __name__ == "__main__":
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
     MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric)
-    np.savetxt("MTs.txt", MTs)
-    np.savetxt("MTp.txt", MTp)
         
     # And plot most likely solution:
     synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
