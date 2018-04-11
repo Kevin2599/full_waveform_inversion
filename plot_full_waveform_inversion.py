@@ -96,9 +96,25 @@ def convert_spherical_coords_to_cartesian_coords(r,theta,phi):
 
 def Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z):
     """Function to take 3D grid coords for a cartesian coord system and convert to 2D equal area projection."""
-    X = x * np.sqrt(2/(1+z))
-    Y = y * np.sqrt(2/(1+z))
+    X = x * np.sqrt(1/(1+z))
+    Y = y * np.sqrt(1/(1+z))
     return X,Y
+
+def rotate_threeD_coords_about_spec_axis(x, y, z, rot_angle, axis_for_rotation="x"):
+    """Function to rotate about x-axis (right-hand rule). Rotation angle must be in radians."""
+    if axis_for_rotation == "x":
+        x_rot = x
+        y_rot = (y*np.cos(rot_angle)) - (z*np.sin(rot_angle))
+        z_rot = (y*np.sin(rot_angle)) + (z*np.cos(rot_angle))
+    elif axis_for_rotation == "y":
+        x_rot = (x*np.cos(rot_angle)) + (z*np.sin(rot_angle))
+        y_rot = y
+        z_rot = (z*np.cos(rot_angle)) - (x*np.sin(rot_angle))
+    elif axis_for_rotation == "z":
+        x_rot = (x*np.cos(rot_angle)) - (y*np.sin(rot_angle))
+        y_rot = (x*np.sin(rot_angle)) + (y*np.cos(rot_angle))
+        z_rot = z
+    return x_rot, y_rot, z_rot
 
 def create_and_plot_bounding_circle_and_path(ax):
     """Function to create and plot bounding circle for plotting MT solution. 
@@ -132,7 +148,7 @@ def get_nodal_plane_xyz_coords(mt_in):
     pos_nodalline = bb._nodalline_positive # extract positive nodal plane coords (in 3D x,y,z)
     return neg_nodalline, pos_nodalline
 
-def plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch="lower", radiation_MT_phase="P", unconstrained_vs_DC_switch="unconstrained"):
+def plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch="lower", radiation_MT_phase="P", unconstrained_vs_DC_switch="unconstrained", plot_plane="EN"):
     """Function to plot radiation pattern on axis ax, given 6 MT describing MT to plot radiation pattern for and other args.
     Outputs axis ax with radiation pattern plotted."""
     # Get MT to plot radiation pattern for:
@@ -186,25 +202,31 @@ def plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, boun
         THETA_tmp, PHI_tmp = np.meshgrid(theta_tmp, phi_tmp)
         R_tmp = np.ones(4,dtype=float)
         x,y,z = convert_spherical_coords_to_cartesian_coords(R_tmp,THETA_tmp.flatten(),PHI_tmp.flatten())
+        # Perform rotation of plot plane if required:
+        if plot_plane == "EZ":
+            x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+        elif plot_plane == "NZ":
+            x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+            x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
         X, Y = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
         # And plot (but ONLY if within bounding circle):
         if bounding_circle_path.contains_point((X[0],Y[0]), radius=0):
             poly_corner_coords = [(Y[0],X[0]), (Y[2],X[2]), (Y[3],X[3]), (Y[1],X[1])]
             if unconstrained_vs_DC_switch == "DC":
-                polygon_curr = Polygon(poly_corner_coords, closed=True, facecolor=matplotlib.cm.binary(int(disp_magn[b]*256)), alpha=0.6)
+                polygon_curr = Polygon(poly_corner_coords, closed=True, facecolor=matplotlib.cm.binary(128 + int(disp_magn[b]*128)), alpha=0.6)
             elif unconstrained_vs_DC_switch == "unconstrained":
-                polygon_curr = Polygon(poly_corner_coords, closed=True, facecolor=matplotlib.cm.jet(int(disp_magn[b]*256)), alpha=0.6)
+                polygon_curr = Polygon(poly_corner_coords, closed=True, facecolor=matplotlib.cm.RdBu(128 - int(disp_magn[b]*128)), alpha=0.6)
             ax.add_patch(polygon_curr)
     # Plot final point (theta,phi=0,0) (beginning point):
     if unconstrained_vs_DC_switch == "DC":
-        centre_area = Circle([0.,0.], radius=theta_spacing/2., facecolor=matplotlib.cm.binary(int(disp_magn[0]*256)), alpha=0.6)
+        centre_area = Circle([0.,0.], radius=theta_spacing/2., facecolor=matplotlib.cm.binary(128 + int(disp_magn[b]*128)), alpha=0.6)
     elif unconstrained_vs_DC_switch == "unconstrained":
-        centre_area = Circle([0.,0.], radius=theta_spacing/2., facecolor=matplotlib.cm.jet(int(disp_magn[0]*256)), alpha=0.6)
+        centre_area = Circle([0.,0.], radius=theta_spacing/2., facecolor=matplotlib.cm.RdBu(128 - int(disp_magn[b]*128)), alpha=0.6)
     ax.add_patch(centre_area)
     
     return ax
 
-def plot_nodal_planes_for_given_NED_sixMT(ax, MT_for_nodal_planes, bounding_circle_path, lower_upper_hemi_switch="lower", alpha_nodal_planes=0.3):
+def plot_nodal_planes_for_given_NED_sixMT(ax, MT_for_nodal_planes, bounding_circle_path, lower_upper_hemi_switch="lower", alpha_nodal_planes=0.3, plot_plane="EN"):
     """Function for plotting nodal planes on axis ax, for given 6MT in NED format for nodal planes."""
 
     ned_mt = MT_for_nodal_planes
@@ -215,9 +237,21 @@ def plot_nodal_planes_for_given_NED_sixMT(ax, MT_for_nodal_planes, bounding_circ
     if lower_upper_hemi_switch=="upper":
         plane_1_3D[2,:] = -1*plane_1_3D[2,:] # as positive z is down, therefore down gives spherical projection
         plane_2_3D[2,:] = -1*plane_2_3D[2,:] # as positive z is down, therefore down gives spherical projection
+    # Specify 3D coords explicitely:
+    x1, y1, z1 = plane_1_3D[0],plane_1_3D[1],plane_1_3D[2]
+    x2, y2, z2 = plane_2_3D[0],plane_2_3D[1],plane_2_3D[2]
+    # Perform rotation of plot plane if required:
+    if plot_plane == "EZ":
+        x1, y1, z1 = rotate_threeD_coords_about_spec_axis(x1, y1, z1, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+        x2, y2, z2 = rotate_threeD_coords_about_spec_axis(x2, y2, z2, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+    elif plot_plane == "NZ":
+        x1,y1,z1 = rotate_threeD_coords_about_spec_axis(x1, y1, z1, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+        x1,y1,z1 = rotate_threeD_coords_about_spec_axis(x1, y1, z1, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
+        x2,y2,z2 = rotate_threeD_coords_about_spec_axis(x2, y2, z2, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+        x2,y2,z2 = rotate_threeD_coords_about_spec_axis(x2, y2, z2, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
     # And convert to 2D:
-    X1,Y1 = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(plane_1_3D[0],plane_1_3D[1],plane_1_3D[2])
-    X2,Y2 = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(plane_2_3D[0],plane_2_3D[1],plane_2_3D[2])
+    X1,Y1 = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x1, y1, z1)
+    X2,Y2 = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x2, y2, z2)
 
     # Get only data points within bounding circle:
     path_coords_plane_1 = [] # list to store path coords
@@ -257,7 +291,7 @@ def plot_nodal_planes_for_given_NED_sixMT(ax, MT_for_nodal_planes, bounding_circ
     
     return ax
 
-def plot_nodal_planes_for_given_NED_sixMT(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8):
+def plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8, plot_plane="EN"):
     """Function for plotting single force vector on beachball style plot."""
     
     # normalise:
@@ -267,6 +301,12 @@ def plot_nodal_planes_for_given_NED_sixMT(ax, single_force_vector_to_plot, alpha
     x = np.array([single_force_vector_to_plot[1]])
     y = np.array([single_force_vector_to_plot[0]])
     z = np.array([single_force_vector_to_plot[2]])
+    # Perform rotation of plot plane if required:
+    if plot_plane == "EZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+    elif plot_plane == "NZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
     X, Y = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
     
     # And plot:
@@ -274,7 +314,7 @@ def plot_nodal_planes_for_given_NED_sixMT(ax, single_force_vector_to_plot, alpha
     
     return ax
 
-def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained"):
+def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", plot_plane="EN"):
     """Function to plot full waveform DC constrained inversion result on sphere, then project into 2D using an equal area projection.
     Input MTs are np array of NED MTs in shape [6,n] where n is number of solutions. Also takes optional radiation_pattern_MT, which it will plot a radiation pattern for.
         Note: x and y coordinates switched for plotting to take from NE to EN
@@ -289,6 +329,17 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
     ax.set_ylabel("N")
     ax.set_xlim(-3.5,3.5)
     ax.set_ylim(-3.5,3.5)
+    ax.quiver([-2.6],[2.5],[0.5],[0.],color="k",alpha=0.8, angles='xy', scale_units='xy', scale=1) # Plot x direction label
+    ax.quiver([-2.5],[2.4],[0.],[0.5],color="k",alpha=0.8, angles='xy', scale_units='xy', scale=1) # Plot y direction label
+    if plot_plane=="EN":
+        plt.text(-2.0,2.5,"E",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # x label
+        plt.text(-2.5,3.0,"N",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # y label
+    elif plot_plane=="EZ":
+        plt.text(-2.0,2.5,"E",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # x label
+        plt.text(-2.5,3.0,"Z",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # y label
+    elif plot_plane=="NZ":
+        plt.text(-2.0,2.5,"N",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # x label
+        plt.text(-2.5,3.0,"Z",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # y label
     plt.axis('off')
     
     # Setup bounding circle and create bounding path from circle:
@@ -301,7 +352,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
         
         # Plot radiation pattern if provided with radiation pattern MT to plot:
         if not len(radiation_pattern_MT)==0:
-            plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch=lower_upper_hemi_switch, radiation_MT_phase="P", unconstrained_vs_DC_switch=unconstrained_vs_DC_switch) # Plot radiation pattern
+            plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch=lower_upper_hemi_switch, radiation_MT_phase="P", unconstrained_vs_DC_switch=unconstrained_vs_DC_switch, plot_plane=plot_plane) # Plot radiation pattern
     
         # Plot MT nodal plane solutions:
         # Get samples to plot:
@@ -309,7 +360,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
         if num_MT_solutions_to_plot == 1:
             if not len(radiation_pattern_MT)==0:
                 curr_MT_to_plot = radiation_pattern_MT
-                ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3)
+                ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3, plot_plane=plot_plane)
         # else if number of samples > 1:
         else:
             if len(MTs_to_plot[0,:]) > num_MT_solutions_to_plot:
@@ -322,12 +373,12 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 curr_MT_to_plot = MTs_to_plot[:,i]
                 # And try to plot current MT nodal planes:
                 print "Attempted to plot solution", i
-                ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3)
+                ax = plot_nodal_planes_for_given_NED_sixMT(ax, curr_MT_to_plot, bounding_circle_path, lower_upper_hemi_switch, alpha_nodal_planes=0.3, plot_plane=plot_plane)
     
     # Or plot single force vector if inversion_type is single_force:
     elif inversion_type == "single_force":
         single_force_vector_to_plot = radiation_pattern_MT
-        ax = plot_nodal_planes_for_given_NED_sixMT(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8)
+        ax = plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8, plot_plane=plot_plane)
                 
     # Plot stations (if provided):
     if not len(stations) == 0:
@@ -351,11 +402,27 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             if lower_upper_hemi_switch=="upper":
                 theta = np.pi-theta
                 phi = phi-np.pi
+            # And correct for points below horizontal plane:
+            # Note: Could correct for each plane, but currently only correct to place stations for EN plane, regardless of rotation.
             if theta>np.pi/2.:
                 theta = theta - np.pi
-                phi=phi+np.pi
-            r = 1.0 # as on surface of focal sphere
+                phi = phi + np.pi
+            if plot_plane == "EZ":
+                if (phi>0. and phi<=np.pi/2.) or (phi>3.*np.pi/2. and phi<=2.*np.pi):
+                    theta = theta + np.pi/2.
+                    phi = phi + np.pi
+            elif plot_plane == "NZ":
+                if phi>np.pi and phi<=2.*np.pi:
+                    theta = theta + np.pi/2.
+                    phi = phi + np.pi
+            r = 1.0/np.sqrt(2.) # as on surface of focal sphere (but sqrt(2) as other previous plotting reduces size of sphere.)
             x,y,z = convert_spherical_coords_to_cartesian_coords(r, theta, phi)
+            # Perform rotation of plot plane if required:
+            if plot_plane == "EZ":
+                x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+            elif plot_plane == "NZ":
+                x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+                x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
             X, Y = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
             # And plot based on polarity:
             if polarity == 1:
@@ -375,9 +442,28 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                     real_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['real_wf']
                     synth_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['synth_wf']
             # Get coords to plot waveform at:
-            r = 2.0 # as want to plot waveforms beyond extent of focal sphere
-            theta = np.pi/2. # Set theta to pi/2 as want to just plot waveforms in horizontal plane
+            if plot_plane == "EN":
+                theta = np.pi/2. # Set theta to pi/2 as want to just plot waveforms in horizontal plane (if plot_plane == "EN")
+                r = 2.0 # as want to plot waveforms beyond extent of focal sphere
+            elif plot_plane == "EZ":
+                if theta == np.pi/2. and (phi==np.pi or phi==2.*np.pi):
+                    phi = np.pi
+                    r = 2.
+                else:
+                    r = np.sqrt(25./((np.cos(theta)**2) + (np.sin(phi)**2))) # as want to plot waveforms beyond extent of focal sphere
+            elif plot_plane == "NZ":
+                if theta == np.pi/2. and (phi==np.pi/2. or phi==3.*np.pi/2.):
+                    phi = np.pi
+                    r = 2.
+                else:
+                    r = np.sqrt(25./((np.cos(theta)**2) + (np.cos(phi)**2))) # as want to plot waveforms beyond extent of focal sphere
             x,y,z = convert_spherical_coords_to_cartesian_coords(r, theta, phi)
+            # Perform rotation of plot plane if required:
+            if plot_plane == "EZ":
+                x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+            elif plot_plane == "NZ":
+                x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+                x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
             X_waveform_loc, Y_waveform_loc = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
             data_xy_coords = (Y_waveform_loc, X_waveform_loc)
             disp_coords = ax.transData.transform(data_xy_coords) # And transform data coords into display coords
@@ -389,10 +475,10 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             left, bottom, width, height = [fig_coords[0]-0.15, fig_coords[1]-0.1, 0.3, 0.2]
             inset_ax_tmp = fig.add_axes([left, bottom, width, height])
             #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
-            inset_ax_tmp.plot(real_wf_current_stat,c='k', alpha=0.6) # Plot real data
-            inset_ax_tmp.plot(synth_wf_current_stat,c='#E83313',linestyle="--", alpha=0.6) # Plot synth data
+            inset_ax_tmp.plot(real_wf_current_stat,c='k', alpha=0.6, linewidth=0.75) # Plot real data
+            inset_ax_tmp.plot(synth_wf_current_stat,c='#E83313',linestyle="--", alpha=0.6, linewidth=0.75) # Plot synth data
             plt.axis('off')
-            
+        
     # And save figure if given figure filename:
     if not len(figure_filename) == 0:
         plt.savefig(figure_filename, dpi=600)
@@ -409,9 +495,9 @@ if __name__ == "__main__":
 
     # Specify MT data dir (containing MTINV solutions):
     #MT_data_filenames = glob.glob("./python_FW_outputs/*FW_DC.pkl")
-    MT_data_filename = "./python_FW_outputs/20171222022435216400_FW_single_force.pkl"
-    MT_waveforms_data_filename = "./python_FW_outputs/20171222022435216400_FW_single_force.wfs"
-    inversion_type = "single_force" # can be: unconstrained, DC or single_force
+    MT_data_filename = "./python_FW_outputs/20171222022435216400_FW_DC.pkl"
+    MT_waveforms_data_filename = "./python_FW_outputs/20171222022435216400_FW_DC.wfs"
+    inversion_type = "DC" # can be: unconstrained, DC or single_force
 
     print "Processing data for:", MT_data_filename
 
@@ -435,8 +521,9 @@ if __name__ == "__main__":
     # Plot MT solutions and radiation pattern of most likely on sphere:
     MTs_to_plot = full_MT_max_prob #MTs_max_gau_loc
     radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
-    figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+".png"
-    plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type)
+    for plot_plane in ["EN","EZ","NZ"]:
+        figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
+        plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
     
     print "Finished processing unconstrained inversion data for:", MT_data_filename
     
