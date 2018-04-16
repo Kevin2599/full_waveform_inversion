@@ -155,7 +155,7 @@ def plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, boun
     ned_mt = radiation_pattern_MT
 
     # Get spherical points to sample for radiation pattern:
-    theta = np.linspace(0,np.pi,250)
+    theta = np.linspace(0,np.pi,100)
     phi = np.linspace(0.,2*np.pi,len(theta))
     r = np.ones(len(theta))
     THETA,PHI = np.meshgrid(theta, phi)
@@ -493,12 +493,14 @@ if __name__ == "__main__":
     
     # Plot for inversion:
     print "Plotting data for inversion"
-
-    # Specify MT data dir (containing MTINV solutions):
-    #MT_data_filenames = glob.glob("./python_FW_outputs/*FW_DC.pkl")
-    MT_data_filename = "./python_FW_outputs/20171222022435216400_FW_DC.pkl"
-    MT_waveforms_data_filename = "./python_FW_outputs/20171222022435216400_FW_DC.wfs"
-    inversion_type = "DC" # can be: unconstrained, DC or single_force
+    
+    # Specify event and inversion type:
+    inversion_type = "DC_single_force_couple" # can be: full_mt, DC, single_force or DC_single_force_couple
+    event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
+    
+    # Get inversion filenames:
+    MT_data_filename = "./python_FW_outputs/"+event_uid+"_FW_"+inversion_type+".pkl" #"./python_FW_outputs/20171222022435216400_FW_DC.pkl"
+    MT_waveforms_data_filename = "./python_FW_outputs/"+event_uid+"_FW_"+inversion_type+".wfs"  #"./python_FW_outputs/20171222022435216400_FW_DC.wfs"
 
     print "Processing data for:", MT_data_filename
 
@@ -507,24 +509,55 @@ if __name__ == "__main__":
     wfs_dict = load_MT_waveforms_dict_from_file(MT_waveforms_data_filename)
     
     
-    # Get most likely solution:
+    # Get most likely solution and plot:
     index_MT_max_prob = np.argmax(MTp) # Index of most likely MT solution
     MT_max_prob = MTs[:,index_MT_max_prob]
-    if not inversion_type == "single_force":
+    
+    if inversion_type == "full_mt":
+        inversion_type = "unconstrained"
         # And get full MT matrix:
-        full_MT_max_prob = get_full_MT_array(MT_max_prob)   
-    else:
+        full_MT_max_prob = get_full_MT_array(MT_max_prob)
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        MTs_to_plot = full_MT_max_prob #MTs_max_gau_loc
+        radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
+    
+    elif inversion_type == "DC":
+        # And get full MT matrix:
+        full_MT_max_prob = get_full_MT_array(MT_max_prob)
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        MTs_to_plot = full_MT_max_prob #MTs_max_gau_loc
+        radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
+    
+    elif inversion_type == "single_force":
         full_MT_max_prob = MT_max_prob
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        MTs_to_plot = full_MT_max_prob #MTs_max_gau_loc
+        radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
+    
+    elif inversion_type == "DC_single_force_couple":
+        full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
+        radiation_pattern_MT = MT_max_prob[0:6]
+        single_force_vector_max_prob = MT_max_prob[6:9]
+        amp_prop_DC = MT_max_prob[9] # Proportion of amplitude that is DC
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
+            
     print "Full MT (max prob.):"
     print full_MT_max_prob
     print "(For plotting radiation pattern)"
-    
-    # Plot MT solutions and radiation pattern of most likely on sphere:
-    MTs_to_plot = full_MT_max_prob #MTs_max_gau_loc
-    radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
-    for plot_plane in ["EN","EZ","NZ"]:
-        figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-        plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
     
     print "Finished processing unconstrained inversion data for:", MT_data_filename
     
