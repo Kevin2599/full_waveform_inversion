@@ -495,7 +495,7 @@ if __name__ == "__main__":
     print "Plotting data for inversion"
     
     # Specify event and inversion type:
-    inversion_type = "DC_single_force_couple" # can be: full_mt, DC, single_force or DC_single_force_couple
+    inversion_type = "DC_single_force_couple" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
     event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
     
     # Get inversion filenames:
@@ -554,7 +554,20 @@ if __name__ == "__main__":
             plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
             plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
-            
+    
+    elif inversion_type == "DC_single_force_no_coupling":
+        full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
+        radiation_pattern_MT = MT_max_prob[0:6]
+        single_force_vector_max_prob = MT_max_prob[6:9]
+        amp_prop_DC = MT_max_prob[9] # Proportion of amplitude that is DC
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
+        
+    
     print "Full MT (max prob.):"
     print full_MT_max_prob
     print "(For plotting radiation pattern)"
