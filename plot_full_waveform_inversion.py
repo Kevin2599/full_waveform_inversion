@@ -298,9 +298,10 @@ def plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_p
     single_force_vector_to_plot = single_force_vector_to_plot/np.max(np.absolute(single_force_vector_to_plot))
     
     # Convert 3D vector to 2D plane coords:
+    # Note: Single force vector in is is NED format
     x = np.array([single_force_vector_to_plot[1]])
     y = np.array([single_force_vector_to_plot[0]])
-    z = np.array([single_force_vector_to_plot[2]])
+    z = np.array([single_force_vector_to_plot[2]])*-1. # -1 factor as single force z is down (?) whereas 
     # Perform rotation of plot plane if required:
     if plot_plane == "EZ":
         x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
