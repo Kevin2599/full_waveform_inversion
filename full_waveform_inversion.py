@@ -54,6 +54,7 @@ comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-corre
 synth_data_fnames = []
 manual_indices_time_shift = [2,1,0]
 nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
+plot_switch = True # If True, will plot outputs to screen
 
 
 
@@ -527,18 +528,20 @@ if __name__ == "__main__":
     synth_forward_model_result_array = forward_model(green_func_array, M)
 
     # And plot the results:
-    plot_specific_forward_model_result(real_data_array, synth_forward_model_result_array, data_labels, plot_title="Initial theoretical inversion solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
+    if plot_switch:
+        plot_specific_forward_model_result(real_data_array, synth_forward_model_result_array, data_labels, plot_title="Initial theoretical inversion solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
     MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
         
     # And plot most likely solution:
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
-        synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
-    else:
-        synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
-    plot_specific_forward_model_result(real_data_array, synth_forward_model_most_likely_result_array, data_labels, plot_title="Most likely Monte Carlo sampled solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
-    print "Most likely solution:", MTs[:,np.where(MTp==np.max(MTp))[0][0]]
+    if plot_switch:
+        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+        else:
+            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
+        plot_specific_forward_model_result(real_data_array, synth_forward_model_most_likely_result_array, data_labels, plot_title="Most likely Monte Carlo sampled solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
+        print "Most likely solution:", MTs[:,np.where(MTp==np.max(MTp))[0][0]]
     
     # And save data to MTFIT style file:
     save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir) # Saves pickled dictionary containing data from inversion
