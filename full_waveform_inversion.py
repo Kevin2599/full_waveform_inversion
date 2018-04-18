@@ -47,9 +47,9 @@ real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_R
 MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"] # Format of these labels must be of the form "station_name, comp" with the comma
-inversion_type = "DC" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
-perform_normallised_waveform_inversion = False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
-num_samples = 1000 #1000000 # Number of samples to perform Monte Carlo over
+inversion_type = "DC_single_force_no_coupling" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
+perform_normallised_waveform_inversion = True # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
+num_samples = 10000 #1000000 # Number of samples to perform Monte Carlo over
 comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
 manual_indices_time_shift = [2,1,0]
@@ -274,9 +274,8 @@ def generate_random_DC_single_force_uncoupled_tensor():
 def variance_reduction(data, synth):
     """Function to perform variance reduction of data and synthetic. Based on Eq. 2.1 in Walter 2009 thesis. Originally from Templeton and Dreger 2006.
     (When using all data in flattened array into this function, this is approximately equivilent to L2 norm (e.g. Song2011))."""
-    VR = 1. - (np.sum(np.square(data-synth))/(len(data)*np.max(np.absolute(np.square(data-synth)))))
-    print np.sum(np.square(synth)), np.sum(np.square(data))
-    print VR
+    ###VR = 1. - (np.sum(np.square(data-synth))/(len(data)*np.max(np.absolute(np.square(data-synth)))))
+    VR = 1. - (np.sum(np.square(data-synth))/np.sum(np.square(data))) # Calculate variance reduction
     # And account for amplitude difference error (between synth and data) giving negative results:
     # Note: This is artificial! Can avoid by setting normalisation of data before input.
     if VR < 0.:
@@ -297,6 +296,20 @@ def cross_corr_comparison(data, synth):
         ncc_max = 0.
     return ncc_max
     
+# def cross_corr_comparison_shift_allowed(data, synth, max_samples_shift_limit=5):
+#     """Function performing cross-correlation between long waveform data (data) and template.
+#     Performs normalized cross-correlation in fourier domain (since it is faster).
+#     Returns normallised correlation coefficients. See notes on cross-correlation search for more details on normalisation theory"""
+#     synth_normalised = (synth - np.mean(synth))/np.std(synth)/len(synth) # normalise and detrend
+#     std_data = np.std(data)
+#     #correlation of unnormalized data and normalized template:
+#     f_corr = signal.correlate(data, synth_normalised, mode='valid', method='fft') # Note: Needs scipy version 19 or greater (mode = full or valid, use full if want to allow shift)
+#     ncc = np.true_divide(f_corr, std_data) #normalization of the cross correlation
+#     ncc_max = np.max(ncc) # get max cross-correlation coefficient (only if use full mode)
+#     if ncc_max<0.:
+#         ncc_max = 0.
+#     return ncc_max
+    
 def pearson_correlation_comparison(data, synth):
     """Function to compare similarity of data and synth using Pearson correlation coefficient. Returns number between 0. and 1. (as negatives are anti-correlation, set PCC<0 to 0)."""
     mean_data = np.average(data)
@@ -315,9 +328,7 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     
     # 1. Set up data stores to write inversion results to:
     MTs = np.zeros((len(green_func_array[0,:,0]), num_samples), dtype=float)
-    VRs = np.zeros(num_samples, dtype=float)
-    CCs = np.zeros(num_samples, dtype=float)
-    PCCs = np.zeros(num_samples, dtype=float)
+    similarity_values_all_samples = np.zeros(num_samples, dtype=float)
     MTp = np.zeros(num_samples, dtype=float)
     if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
         MT_single_force_rel_amps = np.zeros(num_samples, dtype=float)
@@ -353,25 +364,37 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
             for j in range(len(real_data_array[:,0])):
                 real_data_array_normalised[j,:] = real_data_array[j,:]/np.max(np.absolute(real_data_array[j,:]))
                 synth_waveform_curr_sample_normalised[j,:] = synth_waveform_curr_sample[j,:]/np.max(np.absolute(synth_waveform_curr_sample[j,:]))
-            # And get variance reduction:
-            VR_curr_sample = variance_reduction(real_data_array_normalised.flatten(), synth_waveform_curr_sample_normalised.flatten())  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
-            # And get cross-correlation value:
-            ncc_max_curr_sample = cross_corr_comparison(real_data_array_normalised.flatten(), synth_waveform_curr_sample_normalised.flatten())
-            # And get Pearson correlation coeficient:
-            PCC_curr_sample = pearson_correlation_comparison(real_data_array_normalised.flatten(), synth_waveform_curr_sample_normalised.flatten())
+            # And do waveform comparison, via specified method:
+            similarity_ind_stat_comps = np.zeros(len(real_data_array_normalised[:,0]), dtype=float)
+            for k in range(len(similarity_ind_stat_comps)):
+                if comparison_metric == "VR":
+                    # get variance reduction:
+                    similarity_ind_stat_comps[k] = variance_reduction(real_data_array_normalised[k,:], synth_waveform_curr_sample_normalised[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
+                elif comparison_metric == "CC":
+                    # And get cross-correlation value:
+                    similarity_ind_stat_comps[k] = cross_corr_comparison(real_data_array_normalised[k,:], synth_waveform_curr_sample_normalised[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
+                elif comparison_metric == "PCC":
+                    # And get Pearson correlation coeficient:
+                    similarity_ind_stat_comps[k] = pearson_correlation_comparison(real_data_array_normalised[k,:], synth_waveform_curr_sample_normalised[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
         else:
-            # And get variance reduction:
-            VR_curr_sample = variance_reduction(real_data_array.flatten(), synth_waveform_curr_sample.flatten())  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
-            # And get cross-correlation value:
-            ncc_max_curr_sample = cross_corr_comparison(real_data_array.flatten(), synth_waveform_curr_sample.flatten())
-            # And get Pearson correlation coeficient:
-            PCC_curr_sample = pearson_correlation_comparison(real_data_array.flatten(), synth_waveform_curr_sample.flatten())
+            # Do waveform comparison, via specified method:
+            similarity_ind_stat_comps = np.zeros(len(real_data_array[:,0]), dtype=float)
+            for k in range(len(similarity_ind_stat_comps)):
+                if comparison_metric == "VR":
+                    # get variance reduction:
+                    similarity_ind_stat_comps[k] = variance_reduction(real_data_array[k,:], synth_waveform_curr_sample[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
+                elif comparison_metric == "CC":
+                    # And get cross-correlation value:
+                    similarity_ind_stat_comps[k] = cross_corr_comparison(real_data_array[k,:], synth_waveform_curr_sample[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
+                elif comparison_metric == "PCC":
+                    # And get Pearson correlation coeficient:
+                    similarity_ind_stat_comps[k] = pearson_correlation_comparison(real_data_array[k,:], synth_waveform_curr_sample[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
+        # And get equal weighted similarity value:
+        similarity_curr_sample = np.average(similarity_ind_stat_comps)
         
         # 6. Append results to data store:
         MTs[:,i] = MT_curr_sample[:,0]
-        VRs[i] = VR_curr_sample
-        CCs[i] = ncc_max_curr_sample
-        PCCs[i] = PCC_curr_sample
+        similarity_values_all_samples[i] = similarity_curr_sample
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
             MT_single_force_rel_amps[i] = random_DC_to_single_force_amp_frac
         
@@ -379,16 +402,9 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
             print "Processed for",i,"samples out of",num_samples,"samples"
     
     # 7. Get P(model|data):
-    if comparison_metric == "VR":
-        p_data = np.sum(p_model*VRs) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
-        MTp = VRs*p_model/p_data
-    elif comparison_metric == "CC":
-        p_data = np.sum(p_model*CCs) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
-        MTp = CCs*p_model/p_data
-    elif comparison_metric == "PCC":
-        p_data = np.sum(p_model*PCCs) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
-        MTp = PCCs*p_model/p_data
-    
+    p_data = np.sum(p_model*similarity_values_all_samples) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
+    MTp = similarity_values_all_samples*p_model/p_data
+
     # 8. Any final inversion specific data processing:    
     if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
         MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components

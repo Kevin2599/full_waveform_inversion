@@ -74,7 +74,9 @@ def load_MT_dict_from_file(matlab_data_filename):
         
     return uid, MTp, MTs, stations
     
-    
+def find_nearest(array,value):
+    idx = (np.abs(array-value)).argmin()
+    return array[idx], idx
 
 def load_MT_waveforms_dict_from_file(waveforms_data_filename):
     """Function to read waveforms dict output from full_waveform_inversion."""
@@ -486,6 +488,57 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
     else:
         plt.show()
         
+def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[]):
+    """Function to get the probability distribution based on all samples for % DC vs. single force (which is the final value in MTs). Input is 10xn array of moment tensor samples and a length n array of their associated probability. Output is results plotted and shown to display or saved to file."""
+    
+    # Setup arrays to store data:
+    percentage_DC_all_solns_bins = np.arange(0.,101.,1.)
+    probability_percentage_DC_all_solns_bins = np.zeros(len(percentage_DC_all_solns_bins), dtype=float)
+    probability_percentage_SF_all_solns_bins = np.zeros(len(percentage_DC_all_solns_bins), dtype=float)
+    
+    # Loop over MTs:
+    for i in range(len(MTs[0,:])):
+        MT_prob_current = MTp[i]
+        if not MT_prob_current == 0:
+            # Get frac DC and frac crack from CDC decomposition:
+            frac_DC = MTs[9,i] # Last value from the inversion
+            frac_SF = 1. - MTs[9,i]
+            # And append probability to bin:
+            # For DC:
+            val, val_idx = find_nearest(percentage_DC_all_solns_bins,frac_DC*100.)
+            probability_percentage_DC_all_solns_bins[val_idx] += MTp[i] # Append probability of % DC to bin
+            # And for single force:
+            val, val_idx = find_nearest(percentage_DC_all_solns_bins,frac_SF*100.)
+            probability_percentage_SF_all_solns_bins[val_idx] += MTp[i] # Append probability of % single force to bin
+        
+    # And plot results:
+    fig = plt.figure(figsize=(8,6))
+    ax1 = fig.add_subplot(111)
+    plt.plot(percentage_DC_all_solns_bins[:], probability_percentage_DC_all_solns_bins[:], c='#D94411')
+    ax1.set_xlabel("Percentage DC")
+    ax1.set_xlim((0,100))
+    ax1.set_ylim((0.,np.max(probability_percentage_DC_all_solns_bins[:])*1.05))
+    ###plt.plot(percentage_DC_all_solns_bins, probability_percentage_DC_all_solns_bins, c='k')
+    ax2 = ax1.twiny()
+    ax2.set_xlim((0,100))
+    ax2.set_xlabel("Percentage single force")
+    plt.gca().invert_xaxis()
+    #plt.plot(percentage_DC_all_solns_bins[:], probability_percentage_crack_all_solns_bins[:], c='#309BD8')
+    ax1.set_ylabel("Probability")
+    # And do some presentation formatting:
+    ax1.tick_params(labelright=True)
+    ax1.tick_params(right = 'on')
+    ax1.axvline(x=50,ls="--",c="#CDE64E")
+    ax1.axvline(x=25,ls="--",c="#A5B16B")
+    ax1.axvline(x=75,ls="--",c="#A5B16B")
+    #plt.legend()
+    # And save figure if given figure filename:
+    if not len(figure_filename) == 0:
+        plt.savefig(figure_filename, dpi=600)
+        print "Saving plot to file:", figure_filename
+    else:
+        plt.show()
+        
 
        
 # ------------------- Main script for running -------------------
@@ -495,12 +548,13 @@ if __name__ == "__main__":
     print "Plotting data for inversion"
     
     # Specify event and inversion type:
-    inversion_type = "DC_single_force_couple" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
+    inversion_type = "DC_single_force_no_coupling" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
     event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
+    datadir = "./python_FW_outputs"
     
     # Get inversion filenames:
-    MT_data_filename = "./python_FW_outputs/"+event_uid+"_FW_"+inversion_type+".pkl" #"./python_FW_outputs/20171222022435216400_FW_DC.pkl"
-    MT_waveforms_data_filename = "./python_FW_outputs/"+event_uid+"_FW_"+inversion_type+".wfs"  #"./python_FW_outputs/20171222022435216400_FW_DC.wfs"
+    MT_data_filename = datadir+"/"+event_uid+"_FW_"+inversion_type+".pkl" #"./python_FW_outputs/20171222022435216400_FW_DC.pkl"
+    MT_waveforms_data_filename = datadir+"/"+event_uid+"_FW_"+inversion_type+".wfs"  #"./python_FW_outputs/20171222022435216400_FW_DC.wfs"
 
     print "Processing data for:", MT_data_filename
 
@@ -554,6 +608,9 @@ if __name__ == "__main__":
             plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
             plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
+        # And plot probability distribution for DC vs. single force:
+        figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
+        plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
     
     elif inversion_type == "DC_single_force_no_coupling":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -566,7 +623,9 @@ if __name__ == "__main__":
             plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
             plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
-        
+        # And plot probability distribution for DC vs. single force:
+        figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
+        plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
     
     print "Full MT (max prob.):"
     print full_MT_max_prob
