@@ -47,8 +47,8 @@ real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_R
 MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"] # Format of these labels must be of the form "station_name, comp" with the comma
-inversion_type = "DC_single_force_couple" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
-perform_normallised_waveform_inversion = False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True.
+inversion_type = "DC" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
+perform_normallised_waveform_inversion = False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
 num_samples = 1000 #1000000 # Number of samples to perform Monte Carlo over
 comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
@@ -272,9 +272,13 @@ def generate_random_DC_single_force_uncoupled_tensor():
     return random_DC_single_force_uncoupled_tensor, random_amp_frac
 
 def variance_reduction(data, synth):
-    """Function to perform variance reduction of data and synthetic. Based on Eq. 2.1 in Walter 2009 thesis. Originally from Templeton and Dreger 2006."""
-    VR = 1. - (np.sum(np.square(data-synth))/np.sum(np.square(data))) # Calculate variance reduction
-    # And account for rounding error giving negative results:
+    """Function to perform variance reduction of data and synthetic. Based on Eq. 2.1 in Walter 2009 thesis. Originally from Templeton and Dreger 2006.
+    (When using all data in flattened array into this function, this is approximately equivilent to L2 norm (e.g. Song2011))."""
+    VR = 1. - (np.sum(np.square(data-synth))/(len(data)*np.max(np.absolute(np.square(data-synth)))))
+    print np.sum(np.square(synth)), np.sum(np.square(data))
+    print VR
+    # And account for amplitude difference error (between synth and data) giving negative results:
+    # Note: This is artificial! Can avoid by setting normalisation of data before input.
     if VR < 0.:
         VR = 0.
     return VR
