@@ -48,10 +48,10 @@ MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_R
 single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"] # Format of these labels must be of the form "station_name, comp" with the comma
 inversion_type = "DC_single_force_no_coupling" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
-perform_normallised_waveform_inversion = True # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
+perform_normallised_waveform_inversion = False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
 compare_all_waveforms_simultaneously = False # Bolean - If True, compares all waveform observations together to give one similarity value. If False, compares waveforms from individual recievers separately then combines using equally weighted average. Default = True.
-num_samples = 1000 #1000000 # Number of samples to perform Monte Carlo over
-comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), CC-shift (cross-correlation of signal with shift allowed), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
+num_samples = 10000 #1000000 # Number of samples to perform Monte Carlo over
+comparison_metric = "VR" # Options are VR (variation reduction), CC (cross-correlation of static signal), CC-shift (cross-correlation of signal with shift allowed), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
 manual_indices_time_shift = [2,1,0]
 nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)

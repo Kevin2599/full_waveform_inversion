@@ -510,7 +510,13 @@ def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[]):
             # And for single force:
             val, val_idx = find_nearest(percentage_DC_all_solns_bins,frac_SF*100.)
             probability_percentage_SF_all_solns_bins[val_idx] += MTp[i] # Append probability of % single force to bin
-        
+    
+    # Set first and final bins equal to twice the bin value (as they only get values rounded from half the region of other bins):
+    probability_percentage_DC_all_solns_bins[0] = probability_percentage_DC_all_solns_bins[0]*2.
+    probability_percentage_DC_all_solns_bins[-1] = probability_percentage_DC_all_solns_bins[-1]*2.
+    probability_percentage_SF_all_solns_bins[0] = probability_percentage_SF_all_solns_bins[0]*2.
+    probability_percentage_SF_all_solns_bins[-1] = probability_percentage_SF_all_solns_bins[-1]*2.
+    
     # And plot results:
     fig = plt.figure(figsize=(8,6))
     ax1 = fig.add_subplot(111)
