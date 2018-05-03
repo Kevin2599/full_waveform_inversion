@@ -39,21 +39,22 @@ import os,sys
 from obspy import UTCDateTime
 import pickle
 import random # For entirely random number generation
+import math
 
 # Specify parameters:
 datadir = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
 outdir = "./python_FW_outputs"
-real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
-MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-data_labels = ["RA51, Z", "RA52, Z", "RA53, Z"] # Format of these labels must be of the form "station_name, comp" with the comma
-inversion_type = "DC_single_force_no_coupling" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
+real_data_fnames = ['real_data_RA51_t.txt', 'real_data_RA52_t.txt', 'real_data_RA53_t.txt'] #['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt', 'real_data_RA51_r.txt', 'real_data_RA52_r.txt', 'real_data_RA53_r.txt', 'real_data_RA51_t.txt', 'real_data_RA52_t.txt', 'real_data_RA53_t.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
+MT_green_func_fnames = ['green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt', 'green_func_array_MT_RA51_r.txt', 'green_func_array_MT_RA52_r.txt', 'green_func_array_MT_RA53_r.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+single_force_green_func_fnames = ['green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt', 'green_func_array_single_force_RA51_r.txt', 'green_func_array_single_force_RA52_r.txt', 'green_func_array_single_force_RA53_r.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+data_labels = ["RA51, T", "RA52, T", "RA53, T"] #["RA51, Z", "RA52, Z", "RA53, Z", "RA51, R", "RA52, R", "RA53, R", "RA51, T", "RA52, T", "RA53, T"] # Format of these labels must be of the form "station_name, comp" with the comma
+inversion_type = "single_force" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
 perform_normallised_waveform_inversion = False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
 compare_all_waveforms_simultaneously = False # Bolean - If True, compares all waveform observations together to give one similarity value. If False, compares waveforms from individual recievers separately then combines using equally weighted average. Default = True.
 num_samples = 10000 #1000000 # Number of samples to perform Monte Carlo over
 comparison_metric = "VR" # Options are VR (variation reduction), CC (cross-correlation of static signal), CC-shift (cross-correlation of signal with shift allowed), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
-manual_indices_time_shift = [2,1,0]
+manual_indices_time_shift = [2,1,0] #[2,1,0,2,1,0,2,1,0]
 nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 plot_switch = True # If True, will plot outputs to screen
 
@@ -632,7 +633,12 @@ if __name__ == "__main__":
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
     MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously)
-        
+    
+    # Check that probability of output is non-zero:
+    if math.isnan(MTp[0]):
+        print "Error: Sum of probabilities is equal to zero - therefore no adiquate solution could be found and inversion is terminating."
+        sys.exit()
+    
     # And plot most likely solution:
     if plot_switch:
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":

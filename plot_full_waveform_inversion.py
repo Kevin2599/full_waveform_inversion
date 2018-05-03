@@ -317,7 +317,7 @@ def plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_p
     
     return ax
 
-def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", plot_plane="EN"):
+def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", radiation_MT_phase="P", plot_plane="EN"):
     """Function to plot full waveform DC constrained inversion result on sphere, then project into 2D using an equal area projection.
     Input MTs are np array of NED MTs in shape [6,n] where n is number of solutions. Also takes optional radiation_pattern_MT, which it will plot a radiation pattern for.
         Note: x and y coordinates switched for plotting to take from NE to EN
@@ -355,7 +355,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
         
         # Plot radiation pattern if provided with radiation pattern MT to plot:
         if not len(radiation_pattern_MT)==0:
-            plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch=lower_upper_hemi_switch, radiation_MT_phase="P", unconstrained_vs_DC_switch=unconstrained_vs_DC_switch, plot_plane=plot_plane) # Plot radiation pattern
+            plot_radiation_pattern_for_given_NED_DC_sixMT(ax, radiation_pattern_MT, bounding_circle_path, lower_upper_hemi_switch=lower_upper_hemi_switch, radiation_MT_phase=radiation_MT_phase, unconstrained_vs_DC_switch=unconstrained_vs_DC_switch, plot_plane=plot_plane) # Plot radiation pattern
     
         # Plot MT nodal plane solutions:
         # Get samples to plot:
@@ -440,10 +440,35 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             
             # And plot waveforms (real and synthetic):
             # Get current real and synthetic waveforms:
-            for wfs_dict_station_idx in range(len(wfs_dict.keys())):
-                if wfs_dict.keys()[wfs_dict_station_idx].split(",")[0] == station_name:
-                    real_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['real_wf']
-                    synth_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['synth_wf']
+            # Note: Will get all components for current station
+            real_wfs_current_station = []
+            synth_wfs_current_station = []
+            wfs_component_labels_current_station = []
+            for wfs_key in wfs_dict.keys():
+                if station_name in wfs_key:
+                    real_wfs_current_station.append(wfs_dict[wfs_key]['real_wf']) # Append current real waveforms to wfs for current station
+                    synth_wfs_current_station.append(wfs_dict[wfs_key]['synth_wf']) # Append current synth waveforms to wfs for current station
+                    wfs_component_labels_current_station.append(wfs_key.split(", ")[1]) # Get current component label
+            # and reorder if have Z,R and T components:
+            wfs_component_labels_current_station_sorted = list(wfs_component_labels_current_station)
+            wfs_component_labels_current_station_sorted.sort()
+            if wfs_component_labels_current_station_sorted == ['R','T','Z']:
+                real_wfs_current_station_unsorted = list(real_wfs_current_station)
+                synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+                idx_tmp = wfs_component_labels_current_station.index("T")
+                real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("R")
+                real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("Z")
+                real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+                wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+            # for wfs_dict_station_idx in range(len(wfs_dict.keys())):
+            #     if wfs_dict.keys()[wfs_dict_station_idx].split(",")[0] == station_name:
+            #         real_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['real_wf']
+            #         synth_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['synth_wf']
             # Get coords to plot waveform at:
             if plot_plane == "EN":
                 theta = np.pi/2. # Set theta to pi/2 as want to just plot waveforms in horizontal plane (if plot_plane == "EN")
@@ -476,11 +501,23 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             ax.plot([Y,Y_waveform_loc],[X,X_waveform_loc],c='k',alpha=0.6)
             # And plot waveform:
             left, bottom, width, height = [fig_coords[0]-0.15, fig_coords[1]-0.1, 0.3, 0.2]
-            inset_ax_tmp = fig.add_axes([left, bottom, width, height])
-            #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
-            inset_ax_tmp.plot(real_wf_current_stat,c='k', alpha=0.6, linewidth=0.75) # Plot real data
-            inset_ax_tmp.plot(synth_wf_current_stat,c='#E83313',linestyle="--", alpha=0.6, linewidth=0.75) # Plot synth data
-            plt.axis('off')
+            # for each wf component:
+            if len(real_wfs_current_station)>1:
+                for k in range(len(real_wfs_current_station)):
+                    bottom_tmp = bottom + k*height/len(real_wfs_current_station)
+                    inset_ax_tmp = fig.add_axes([left, bottom_tmp, width, height/len(real_wfs_current_station)])
+                    #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
+                    inset_ax_tmp.plot(real_wfs_current_station[k],c='k', alpha=0.6, linewidth=0.75) # Plot real data
+                    inset_ax_tmp.plot(synth_wfs_current_station[k],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.5) # Plot synth data
+                    # inset_ax_tmp.set_ylabel(wfs_component_labels_current_station[k],loc="left",size=10)
+                    plt.title(wfs_component_labels_current_station[k],loc="left",size=8)
+                    plt.axis('off')
+            else:
+                inset_ax_tmp = fig.add_axes([left, bottom, width, height])
+                #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
+                inset_ax_tmp.plot(real_wfs_current_station[0],c='k', alpha=0.6, linewidth=0.75) # Plot real data
+                inset_ax_tmp.plot(synth_wfs_current_station[0],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.75) # Plot synth data
+                plt.axis('off')
         
     # And save figure if given figure filename:
     if not len(figure_filename) == 0:
@@ -554,9 +591,10 @@ if __name__ == "__main__":
     print "Plotting data for inversion"
     
     # Specify event and inversion type:
-    inversion_type = "DC_single_force_no_coupling" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
+    inversion_type = "DC" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
     event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
     datadir = "./python_FW_outputs"
+    radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
     
     # Get inversion filenames:
     MT_data_filename = datadir+"/"+event_uid+"_FW_"+inversion_type+".pkl" #"./python_FW_outputs/20171222022435216400_FW_DC.pkl"
@@ -582,7 +620,7 @@ if __name__ == "__main__":
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
     
     elif inversion_type == "DC":
         # And get full MT matrix:
@@ -592,7 +630,7 @@ if __name__ == "__main__":
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
     
     elif inversion_type == "single_force":
         full_MT_max_prob = MT_max_prob
@@ -601,7 +639,7 @@ if __name__ == "__main__":
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
     
     elif inversion_type == "DC_single_force_couple":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -611,9 +649,9 @@ if __name__ == "__main__":
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
@@ -626,9 +664,9 @@ if __name__ == "__main__":
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
