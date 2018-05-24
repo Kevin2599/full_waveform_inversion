@@ -58,7 +58,7 @@ synth_data_fnames = []
 manual_indices_time_shift = [23, 21, 21, 22, 23, 21, 24, 24, 19] #[13, 9, 6, 5, 8, 20, 19, 12, 22, 22] #55 #[2,1,0,2,1,0,2,1,0] # Values by which to shift greens functions (must be integers here)
 nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" #"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 plot_switch = True # If True, will plot outputs to screen
-num_processors = 2 # Number of processors to run for (will not run in parallel if num_processors = 1)
+num_processors = 1 # Number of processors to run for (default is 1)
 
 
 # ------------------- Define various functions used in script -------------------
@@ -448,68 +448,12 @@ def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comp
         similarity_curr_sample = np.average(similarity_ind_stat_comps)
     
     return similarity_curr_sample
-    
-def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True):
-    """Function to use random Monte Carlo sampling of the moment tensor to derive a best fit for the moment tensor to the data.
-    Notes: Currently does this using M_amplitude (as makes comparison of data realistic) (alternative could be to normalise real and synthetic data).
-    Inversion type can be: full_mt, DC or single_force. If it is full_mt or DC, must give 6 greens functions in greeen_func_array. If it is a single force, must use single force greens functions (3).
-    Comparison metrics can be: VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient)."""
-    
-    # 1. Set up data stores to write inversion results to:
-    MTs = np.zeros((len(green_func_array[0,:,0]), num_samples), dtype=float)
-    similarity_values_all_samples = np.zeros(num_samples, dtype=float)
-    MTp = np.zeros(num_samples, dtype=float)
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
-        MT_single_force_rel_amps = np.zeros(num_samples, dtype=float)
-    
-    # 2. Assign prior probabilities:
-    # Note: Don't need to assign p_data as will find via marginalisation
-    p_model = 1./num_samples # P(model) - Assume constant P(model)
-    
-    # 3. Loop over samples, checking how well a given MT sample synthetic wavefrom from the forward model compares to the real data:
-    for i in range(num_samples):
-        # 4. Generate synthetic waveform for current sample:
-        if inversion_type=="full_mt":
-            MT_curr_sample = generate_random_MT()*M_amplitude # Generate a random MT sample
-        elif inversion_type=="DC":
-            MT_curr_sample = generate_random_DC_MT()*M_amplitude # Generate a random DC sample
-        elif inversion_type=="single_force":
-            MT_curr_sample = generate_random_single_force_vector()*M_amplitude # Generate a random single force sample
-        elif inversion_type == "DC_single_force_couple":
-            MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_DC_single_force_coupled_tensor() # Generate a random DC-single-force coupled sample, with associated relative amplitude of DC to single force
-            MT_curr_sample = MT_curr_sample*M_amplitude
-        elif inversion_type == "DC_single_force_no_coupling":
-            MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_DC_single_force_uncoupled_tensor()
-            MT_curr_sample = MT_curr_sample*M_amplitude
-        synth_waveform_curr_sample = forward_model(green_func_array, MT_curr_sample) # Note: Greens functions must be of similar amplitude units going into here...
-        
-        # 5. Compare real data to synthetic waveform (using variance reduction or other comparison metric), to assign probability that data matches current model:
-        similarity_curr_sample = compare_synth_to_real_waveforms(real_data_array, synth_waveform_curr_sample, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously)      
-                
-        # 6. Append results to data store:
-        MTs[:,i] = MT_curr_sample[:,0]
-        similarity_values_all_samples[i] = similarity_curr_sample
-        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
-            MT_single_force_rel_amps[i] = random_DC_to_single_force_amp_frac
-        
-        if i % 100000 == 0:
-            print "Processed for",i,"samples out of",num_samples,"samples"
-    
-    # 7. Get P(model|data):
-    p_data = np.sum(p_model*similarity_values_all_samples) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
-    MTp = similarity_values_all_samples*p_model/p_data
-
-    # 8. Any final inversion specific data processing:    
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
-        MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components
-    
-    return MTs, MTp
 
 def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps):
-    """Parallel worker function for perform_monte_carlo_sampled_waveform_inversion_PARALLEL function."""
+    """Parallel worker function for perform_monte_carlo_sampled_waveform_inversion function."""
     print "Processing for process:", procnum, "for ", num_samples_per_processor, "samples."
     
-    # Define temp data stores:
+    # Define temp data stores for current process:
     tmp_MTs = np.zeros((len(green_func_array[0,:,0]), num_samples_per_processor), dtype=float)
     tmp_similarity_values_all_samples = np.zeros(num_samples_per_processor, dtype=float)
     if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
@@ -517,7 +461,7 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     else:
         tmp_MT_single_force_rel_amps = []
     
-    # Loop over multiprocess samples:
+    # 3. Loop over samples, checking how well a given MT sample synthetic wavefrom from the forward model compares to the real data:
     for i in range(num_samples_per_processor):
         # 4. Generate synthetic waveform for current sample:
         if inversion_type=="full_mt":
@@ -553,7 +497,7 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     print "Finished processing process:", procnum, "for ", num_samples_per_processor, "samples."
 
 
-def perform_monte_carlo_sampled_waveform_inversion_PARALLEL(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=2):
+def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=1):
     """Function to use random Monte Carlo sampling of the moment tensor to derive a best fit for the moment tensor to the data.
     Notes: Currently does this using M_amplitude (as makes comparison of data realistic) (alternative could be to normalise real and synthetic data).
     Inversion type can be: full_mt, DC or single_force. If it is full_mt or DC, must give 6 greens functions in greeen_func_array. If it is a single force, must use single force greens functions (3).
@@ -573,8 +517,7 @@ def perform_monte_carlo_sampled_waveform_inversion_PARALLEL(real_data_array, gre
     # Note: Don't need to assign p_data as will find via marginalisation
     p_model = 1./num_samples # P(model) - Assume constant P(model)
     
-    # 3. Loop over samples, checking how well a given MT sample synthetic wavefrom from the forward model compares to the real data:
-    #---
+    # 3. to 6. are parallelised here:
     # Submit to multiple processors:
     # Setup multiprocessing:
     manager = multiprocessing.Manager()
@@ -597,7 +540,7 @@ def perform_monte_carlo_sampled_waveform_inversion_PARALLEL(real_data_array, gre
         similarity_values_all_samples[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_similarity_values_all_samples[procnum]
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
             MT_single_force_rel_amps[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_MT_single_force_rel_amps[procnum]
-    #---
+    # From PARALLEL_worker_mc_inv function, have obtained: MTs, similarity_values_all_samples (and MT_single_force_rel_amps if required)
     
     # 7. Get P(model|data):
     p_data = np.sum(p_model*similarity_values_all_samples) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
@@ -717,7 +660,7 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
     
     
-def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift, nlloc_hyp_filename, plot_switch=False, num_processors=2):
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift, nlloc_hyp_filename, plot_switch=False, num_processors=1):
     """Function to run the inversion script."""
     # Load input data (completely, for specific inversion type):
     real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift)
@@ -734,10 +677,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
         plot_specific_forward_model_result(real_data_array, synth_forward_model_result_array, data_labels, plot_title="Initial theoretical inversion solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
-    if num_processors == 1:
-        MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously)
-    else:
-        MTs, MTp = perform_monte_carlo_sampled_waveform_inversion_PARALLEL(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors)
+    MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors)
     
     # Check that probability of output is non-zero:
     if math.isnan(MTp[0]):
