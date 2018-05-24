@@ -40,24 +40,25 @@ from obspy import UTCDateTime
 import pickle
 import random # For entirely random number generation
 import math
+import multiprocessing
 
 # Specify parameters:
-datadir = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
+datadir = '/Users/tomhudson/Python/obspy_scripts/fk/test_data/output_data_for_inversion_MT_and_single_force_Rhone_gl_event'
 outdir = "./python_FW_outputs"
-real_data_fnames = ['real_data_RA51_t.txt', 'real_data_RA52_t.txt', 'real_data_RA53_t.txt'] #['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt', 'real_data_RA51_r.txt', 'real_data_RA52_r.txt', 'real_data_RA53_r.txt', 'real_data_RA51_t.txt', 'real_data_RA52_t.txt', 'real_data_RA53_t.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
-MT_green_func_fnames = ['green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt', 'green_func_array_MT_RA51_r.txt', 'green_func_array_MT_RA52_r.txt', 'green_func_array_MT_RA53_r.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-single_force_green_func_fnames = ['green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt', 'green_func_array_single_force_RA51_r.txt', 'green_func_array_single_force_RA52_r.txt', 'green_func_array_single_force_RA53_r.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-data_labels = ["RA51, T", "RA52, T", "RA53, T"] #["RA51, Z", "RA52, Z", "RA53, Z", "RA51, R", "RA52, R", "RA53, R", "RA51, T", "RA52, T", "RA53, T"] # Format of these labels must be of the form "station_name, comp" with the comma
+real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt', 'real_data_RA51_r.txt', 'real_data_RA52_r.txt', 'real_data_RA53_r.txt', 'real_data_RA51_t.txt', 'real_data_RA52_t.txt', 'real_data_RA53_t.txt'] #['real_data_ST01_z.txt', 'real_data_ST02_z.txt', 'real_data_ST03_z.txt', 'real_data_ST04_z.txt', 'real_data_ST05_z.txt', 'real_data_ST06_z.txt', 'real_data_ST07_z.txt', 'real_data_ST08_z.txt', 'real_data_ST09_z.txt', 'real_data_ST10_z.txt'] #['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt', 'real_data_RA51_r.txt', 'real_data_RA52_r.txt', 'real_data_RA53_r.txt', 'real_data_RA51_t.txt', 'real_data_RA52_t.txt', 'real_data_RA53_t.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
+MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt', 'green_func_array_MT_RA51_r.txt', 'green_func_array_MT_RA52_r.txt', 'green_func_array_MT_RA53_r.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] #['green_func_array_MT_ST01_z.txt', 'green_func_array_MT_ST02_z.txt', 'green_func_array_MT_ST03_z.txt', 'green_func_array_MT_ST04_z.txt', 'green_func_array_MT_ST05_z.txt', 'green_func_array_MT_ST06_z.txt', 'green_func_array_MT_ST07_z.txt', 'green_func_array_MT_ST08_z.txt', 'green_func_array_MT_ST09_z.txt', 'green_func_array_MT_ST10_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt', 'green_func_array_MT_RA51_r.txt', 'green_func_array_MT_RA52_r.txt', 'green_func_array_MT_RA53_r.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt', 'green_func_array_single_force_RA51_r.txt', 'green_func_array_single_force_RA52_r.txt', 'green_func_array_single_force_RA53_r.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] #['green_func_array_single_force_ST01_z.txt', 'green_func_array_single_force_ST02_z.txt', 'green_func_array_single_force_ST03_z.txt', 'green_func_array_single_force_ST04_z.txt', 'green_func_array_single_force_ST05_z.txt', 'green_func_array_single_force_ST06_z.txt', 'green_func_array_single_force_ST07_z.txt', 'green_func_array_single_force_ST08_z.txt', 'green_func_array_single_force_ST09_z.txt', 'green_func_array_single_force_ST10_z.txt'] #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt', 'green_func_array_single_force_RA51_r.txt', 'green_func_array_single_force_RA52_r.txt', 'green_func_array_single_force_RA53_r.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+data_labels = ["RA51, Z", "RA52, Z", "RA53, Z", "RA51, R", "RA52, R", "RA53, R", "RA51, T", "RA52, T", "RA53, T"] #["ST01, Z", "ST02, Z", "ST03, Z", "ST04, Z", "ST05, Z", "ST06, Z", "ST07, Z", "ST08, Z", "ST09, Z", "ST10, Z"] #["RA51, Z", "RA52, Z", "RA53, Z", "RA51, R", "RA52, R", "RA53, R", "RA51, T", "RA52, T", "RA53, T"] # Format of these labels must be of the form "station_name, comp" with the comma
 inversion_type = "single_force" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
-perform_normallised_waveform_inversion = False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
+perform_normallised_waveform_inversion = False ###False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
 compare_all_waveforms_simultaneously = False # Bolean - If True, compares all waveform observations together to give one similarity value. If False, compares waveforms from individual recievers separately then combines using equally weighted average. Default = True.
 num_samples = 10000 #1000000 # Number of samples to perform Monte Carlo over
 comparison_metric = "VR" # Options are VR (variation reduction), CC (cross-correlation of static signal), CC-shift (cross-correlation of signal with shift allowed), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
 synth_data_fnames = []
-manual_indices_time_shift = [2,1,0] #[2,1,0,2,1,0,2,1,0]
-nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
+manual_indices_time_shift = [23, 21, 21, 22, 23, 21, 24, 24, 19] #[13, 9, 6, 5, 8, 20, 19, 12, 22, 22] #55 #[2,1,0,2,1,0,2,1,0] # Values by which to shift greens functions (must be integers here)
+nlloc_hyp_filename = "NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" #"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 plot_switch = True # If True, will plot outputs to screen
-
+num_processors = 2 # Number of processors to run for (will not run in parallel if num_processors = 1)
 
 
 # ------------------- Define various functions used in script -------------------
@@ -503,6 +504,110 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
         MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components
     
     return MTs, MTp
+
+def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps):
+    """Parallel worker function for perform_monte_carlo_sampled_waveform_inversion_PARALLEL function."""
+    print "Processing for process:", procnum, "for ", num_samples_per_processor, "samples."
+    
+    # Define temp data stores:
+    tmp_MTs = np.zeros((len(green_func_array[0,:,0]), num_samples_per_processor), dtype=float)
+    tmp_similarity_values_all_samples = np.zeros(num_samples_per_processor, dtype=float)
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        tmp_MT_single_force_rel_amps = np.zeros(num_samples_per_processor, dtype=float)
+    else:
+        tmp_MT_single_force_rel_amps = []
+    
+    # Loop over multiprocess samples:
+    for i in range(num_samples_per_processor):
+        # 4. Generate synthetic waveform for current sample:
+        if inversion_type=="full_mt":
+            MT_curr_sample = generate_random_MT()*M_amplitude # Generate a random MT sample
+        elif inversion_type=="DC":
+            MT_curr_sample = generate_random_DC_MT()*M_amplitude # Generate a random DC sample
+        elif inversion_type=="single_force":
+            MT_curr_sample = generate_random_single_force_vector()*M_amplitude # Generate a random single force sample
+        elif inversion_type == "DC_single_force_couple":
+            MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_DC_single_force_coupled_tensor() # Generate a random DC-single-force coupled sample, with associated relative amplitude of DC to single force
+            MT_curr_sample = MT_curr_sample*M_amplitude
+        elif inversion_type == "DC_single_force_no_coupling":
+            MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_DC_single_force_uncoupled_tensor()
+            MT_curr_sample = MT_curr_sample*M_amplitude
+        synth_waveform_curr_sample = forward_model(green_func_array, MT_curr_sample) # Note: Greens functions must be of similar amplitude units going into here...
+    
+        # 5. Compare real data to synthetic waveform (using variance reduction or other comparison metric), to assign probability that data matches current model:
+        similarity_curr_sample = compare_synth_to_real_waveforms(real_data_array, synth_waveform_curr_sample, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously)      
+            
+        # 6. Append results to data store:
+        tmp_MTs[:,i] = MT_curr_sample[:,0]
+        tmp_similarity_values_all_samples[i] = similarity_curr_sample
+        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+            tmp_MT_single_force_rel_amps[i] = random_DC_to_single_force_amp_frac
+            
+        if i % 10000 == 0:
+            print "Processor number:", procnum, "- Processed for",i,"samples out of",num_samples_per_processor,"samples"
+    
+    # And return values back to script:
+    return_dict_MTs[procnum] = tmp_MTs
+    return_dict_similarity_values_all_samples[procnum] = tmp_similarity_values_all_samples
+    return_dict_MT_single_force_rel_amps[procnum] = tmp_MT_single_force_rel_amps
+    print "Finished processing process:", procnum, "for ", num_samples_per_processor, "samples."
+
+
+def perform_monte_carlo_sampled_waveform_inversion_PARALLEL(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=2):
+    """Function to use random Monte Carlo sampling of the moment tensor to derive a best fit for the moment tensor to the data.
+    Notes: Currently does this using M_amplitude (as makes comparison of data realistic) (alternative could be to normalise real and synthetic data).
+    Inversion type can be: full_mt, DC or single_force. If it is full_mt or DC, must give 6 greens functions in greeen_func_array. If it is a single force, must use single force greens functions (3).
+    Comparison metrics can be: VR (variation reduction), CC (cross-correlation of static signal), or PCC (Pearson correlation coeficient).
+    RUNS IN PARALLEL, with specified number of processors."""
+    
+    # 1. Set up data stores to write inversion results to:
+    MTs = np.zeros((len(green_func_array[0,:,0]), num_samples), dtype=float)
+    similarity_values_all_samples = np.zeros(num_samples, dtype=float)
+    MTp = np.zeros(num_samples, dtype=float)
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        MT_single_force_rel_amps = np.zeros(num_samples, dtype=float)
+    else:
+        MT_single_force_rel_amps = []
+    
+    # 2. Assign prior probabilities:
+    # Note: Don't need to assign p_data as will find via marginalisation
+    p_model = 1./num_samples # P(model) - Assume constant P(model)
+    
+    # 3. Loop over samples, checking how well a given MT sample synthetic wavefrom from the forward model compares to the real data:
+    #---
+    # Submit to multiple processors:
+    # Setup multiprocessing:
+    manager = multiprocessing.Manager()
+    return_dict_MTs = manager.dict() # for returning data
+    return_dict_similarity_values_all_samples = manager.dict() # for returning data
+    return_dict_MT_single_force_rel_amps = manager.dict() # for returning data
+    jobs = []
+    num_samples_per_processor = int(num_samples/num_processors)
+    # Loop over processes doing smapling:
+    for procnum in range(num_processors):
+        p = multiprocessing.Process(target=PARALLEL_worker_mc_inv, args=(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps))
+        jobs.append(p) # Append process to list so that can join together later
+        p.start() # Start process
+    # Join processes back together:
+    for proc in jobs:
+        proc.join()
+    # And get overall data:
+    for procnum in range(num_processors):
+        MTs[:,int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_MTs[procnum]
+        similarity_values_all_samples[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_similarity_values_all_samples[procnum]
+        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+            MT_single_force_rel_amps[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_MT_single_force_rel_amps[procnum]
+    #---
+    
+    # 7. Get P(model|data):
+    p_data = np.sum(p_model*similarity_values_all_samples) # From marginalisation, P(data) = sum(P(model_i).P(data|model_i))
+    MTp = similarity_values_all_samples*p_model/p_data
+
+    # 8. Any final inversion specific data processing:    
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components
+    
+    return MTs, MTp
     
 def get_event_uid_and_station_data_MTFIT_FORMAT_from_nonlinloc_hyp_file(nlloc_hyp_filename):
     """Function to get event uid and station data (station name, azimuth, takeoff angle, polarity) from nonlinloc hyp file. This data is required for writing to file for plotting like MTFIT data."""
@@ -610,13 +715,10 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     out_fname = outdir+"/"+uid+"_FW_"+inversion_type+".wfs"
     print "Saving FW inversion to file:", out_fname
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
-
-# ------------------- End of defining various functions used in script -------------------
-
-
-# ------------------- Main script for running -------------------
-if __name__ == "__main__":
-
+    
+    
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift, nlloc_hyp_filename, plot_switch=False, num_processors=2):
+    """Function to run the inversion script."""
     # Load input data (completely, for specific inversion type):
     real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift)
 
@@ -632,7 +734,10 @@ if __name__ == "__main__":
         plot_specific_forward_model_result(real_data_array, synth_forward_model_result_array, data_labels, plot_title="Initial theoretical inversion solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
-    MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously)
+    if num_processors == 1:
+        MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously)
+    else:
+        MTs, MTp = perform_monte_carlo_sampled_waveform_inversion_PARALLEL(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors)
     
     # Check that probability of output is non-zero:
     if math.isnan(MTp[0]):
@@ -658,6 +763,17 @@ if __name__ == "__main__":
     save_specific_waveforms_to_file(real_data_array, synth_forward_model_most_likely_result_array, data_labels, nlloc_hyp_filename, inversion_type, outdir)
 
     print "Finished"
+
+# ------------------- End of defining various functions used in script -------------------
+
+
+# ------------------- Main script for running -------------------
+if __name__ == "__main__":
+    # Run functions via main run function:
+    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift, nlloc_hyp_filename, plot_switch, num_processors)
+
+
+
 
 
 
