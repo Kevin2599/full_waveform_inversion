@@ -67,7 +67,7 @@ def load_MT_dict_from_file(matlab_data_filename):
         uid = FW_dict["uid"]
         MTp = FW_dict["MTp"]
         MTs = FW_dict["MTs"]
-        stations = FW_dict["stations"]
+        stations = np.array(FW_dict["stations"])
         
     else:
         print "Cannot recognise input filename."
@@ -455,13 +455,26 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             if wfs_component_labels_current_station_sorted == ['R','T','Z']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
-                idx_tmp = wfs_component_labels_current_station.index("T")
+                idx_tmp = wfs_component_labels_current_station.index("R")
                 real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
-                idx_tmp = wfs_component_labels_current_station.index("R")
+                idx_tmp = wfs_component_labels_current_station.index("T")
                 real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
                 idx_tmp = wfs_component_labels_current_station.index("Z")
+                real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+                wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+            elif wfs_component_labels_current_station_sorted == ['L','Q','T']:
+                real_wfs_current_station_unsorted = list(real_wfs_current_station)
+                synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+                idx_tmp = wfs_component_labels_current_station.index("L")
+                real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("Q")
+                real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("T")
                 real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
@@ -583,18 +596,11 @@ def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[]):
         plt.show()
         
 
-       
-# ------------------- Main script for running -------------------
-if __name__ == "__main__":
+def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
+    """Function to run main script."""
     
     # Plot for inversion:
     print "Plotting data for inversion"
-    
-    # Specify event and inversion type:
-    inversion_type = "DC" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
-    event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
-    datadir = "./python_FW_outputs"
-    radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
     
     # Get inversion filenames:
     MT_data_filename = datadir+"/"+event_uid+"_FW_"+inversion_type+".pkl" #"./python_FW_outputs/20171222022435216400_FW_DC.pkl"
@@ -678,6 +684,19 @@ if __name__ == "__main__":
     print "Finished processing unconstrained inversion data for:", MT_data_filename
     
     print "Finished"
+    
+       
+# ------------------- Main script for running -------------------
+if __name__ == "__main__":
+    
+    # Specify event and inversion type:
+    inversion_type = "single_force" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
+    event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
+    datadir = "./python_FW_outputs"
+    radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
+    
+    run(inversion_type, event_uid, datadir, radiation_MT_phase="P")
+
     
     
     
