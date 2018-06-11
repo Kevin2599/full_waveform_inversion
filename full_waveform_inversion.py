@@ -49,7 +49,7 @@ real_data_fnames = ['real_data_RA51_l.txt', 'real_data_RA52_l.txt', 'real_data_R
 MT_green_func_fnames = ['green_func_array_MT_RA51_l.txt', 'green_func_array_MT_RA52_l.txt', 'green_func_array_MT_RA53_l.txt', 'green_func_array_MT_RA54_l.txt', 'green_func_array_MT_RA55_l.txt', 'green_func_array_MT_RA56_l.txt', 'green_func_array_MT_RA57_l.txt', 'green_func_array_MT_RA51_q.txt', 'green_func_array_MT_RA52_q.txt', 'green_func_array_MT_RA53_q.txt', 'green_func_array_MT_RA54_q.txt', 'green_func_array_MT_RA55_q.txt', 'green_func_array_MT_RA56_q.txt', 'green_func_array_MT_RA57_q.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt', 'green_func_array_MT_RA54_t.txt', 'green_func_array_MT_RA55_t.txt', 'green_func_array_MT_RA56_t.txt', 'green_func_array_MT_RA57_t.txt'] ##['green_func_array_MT_SKR01_z.txt', 'green_func_array_MT_SKR02_z.txt', 'green_func_array_MT_SKR03_z.txt', 'green_func_array_MT_SKR04_z.txt', 'green_func_array_MT_SKR05_z.txt', 'green_func_array_MT_SKR06_z.txt', 'green_func_array_MT_SKR07_z.txt', 'green_func_array_MT_SKG08_z.txt', 'green_func_array_MT_SKG13_z.txt'] ##['green_func_array_MT_ST01_z.txt', 'green_func_array_MT_ST02_z.txt', 'green_func_array_MT_ST03_z.txt', 'green_func_array_MT_ST04_z.txt', 'green_func_array_MT_ST05_z.txt', 'green_func_array_MT_ST08_z.txt'] #['green_func_array_MT_RA51_l.txt', 'green_func_array_MT_RA52_l.txt', 'green_func_array_MT_RA53_l.txt']#, 'green_func_array_MT_RA51_r.txt', 'green_func_array_MT_RA52_r.txt', 'green_func_array_MT_RA53_r.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] #['green_func_array_MT_ST01_z.txt', 'green_func_array_MT_ST02_z.txt', 'green_func_array_MT_ST03_z.txt', 'green_func_array_MT_ST04_z.txt', 'green_func_array_MT_ST05_z.txt', 'green_func_array_MT_ST06_z.txt', 'green_func_array_MT_ST07_z.txt', 'green_func_array_MT_ST08_z.txt', 'green_func_array_MT_ST09_z.txt', 'green_func_array_MT_ST10_z.txt'] #['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt', 'green_func_array_MT_RA51_r.txt', 'green_func_array_MT_RA52_r.txt', 'green_func_array_MT_RA53_r.txt', 'green_func_array_MT_RA51_t.txt', 'green_func_array_MT_RA52_t.txt', 'green_func_array_MT_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 single_force_green_func_fnames = ['green_func_array_single_force_RA51_l.txt', 'green_func_array_single_force_RA52_l.txt', 'green_func_array_single_force_RA53_l.txt', 'green_func_array_single_force_RA54_l.txt', 'green_func_array_single_force_RA55_l.txt', 'green_func_array_single_force_RA56_l.txt', 'green_func_array_single_force_RA57_l.txt', 'green_func_array_single_force_RA51_q.txt', 'green_func_array_single_force_RA52_q.txt', 'green_func_array_single_force_RA53_q.txt', 'green_func_array_single_force_RA54_q.txt', 'green_func_array_single_force_RA55_q.txt', 'green_func_array_single_force_RA56_q.txt', 'green_func_array_single_force_RA57_q.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt', 'green_func_array_single_force_RA54_t.txt', 'green_func_array_single_force_RA55_t.txt', 'green_func_array_single_force_RA56_t.txt', 'green_func_array_single_force_RA57_t.txt'] ##['green_func_array_single_force_SKR01_z.txt', 'green_func_array_single_force_SKR02_z.txt', 'green_func_array_single_force_SKR03_z.txt', 'green_func_array_single_force_SKR04_z.txt', 'green_func_array_single_force_SKR05_z.txt', 'green_func_array_single_force_SKR06_z.txt', 'green_func_array_single_force_SKR07_z.txt', 'green_func_array_single_force_SKG08_z.txt', 'green_func_array_single_force_SKG13_z.txt'] ##['green_func_array_single_force_ST01_z.txt', 'green_func_array_single_force_ST02_z.txt', 'green_func_array_single_force_ST03_z.txt', 'green_func_array_single_force_ST04_z.txt', 'green_func_array_single_force_ST05_z.txt', 'green_func_array_single_force_ST08_z.txt'] #['green_func_array_single_force_RA51_l.txt', 'green_func_array_single_force_RA52_l.txt', 'green_func_array_single_force_RA53_l.txt']#, 'green_func_array_single_force_RA51_r.txt', 'green_func_array_single_force_RA52_r.txt', 'green_func_array_single_force_RA53_r.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] #['green_func_array_single_force_ST01_z.txt', 'green_func_array_single_force_ST02_z.txt', 'green_func_array_single_force_ST03_z.txt', 'green_func_array_single_force_ST04_z.txt', 'green_func_array_single_force_ST05_z.txt', 'green_func_array_single_force_ST06_z.txt', 'green_func_array_single_force_ST07_z.txt', 'green_func_array_single_force_ST08_z.txt', 'green_func_array_single_force_ST09_z.txt', 'green_func_array_single_force_ST10_z.txt'] #['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt', 'green_func_array_single_force_RA51_r.txt', 'green_func_array_single_force_RA52_r.txt', 'green_func_array_single_force_RA53_r.txt', 'green_func_array_single_force_RA51_t.txt', 'green_func_array_single_force_RA52_t.txt', 'green_func_array_single_force_RA53_t.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
 data_labels = ["RA51, L", "RA52, L", "RA53, L", "RA54, L", "RA55, L", "RA56, L", "RA57, L", "RA51, Q", "RA52, Q", "RA53, Q", "RA54, Q", "RA55, Q", "RA56, Q", "RA57, Q", "RA51, T", "RA52, T", "RA53, T", "RA54, T", "RA55, T", "RA56, T", "RA57, T"] ##["SKR01, Z", "SKR02, Z", "SKR03, Z", "SKR04, Z", "SKR05, Z", "SKR06, Z", "SKR07, Z", "SKG08, Z", "SKG13, Z"] ##["ST01, Z", "ST02, Z", "ST03, Z", "ST04, Z", "ST05, Z", "ST08, Z"] #["RA51, L", "RA52, L", "RA53, L"]#, "RA51, R", "RA52, R", "RA53, R", "RA51, T", "RA52, T", "RA53, T"] #["ST01, Z", "ST02, Z", "ST03, Z", "ST04, Z", "ST05, Z", "ST06, Z", "ST07, Z", "ST08, Z", "ST09, Z", "ST10, Z"] #["RA51, Z", "RA52, Z", "RA53, Z", "RA51, R", "RA52, R", "RA53, R", "RA51, T", "RA52, T", "RA53, T"] # Format of these labels must be of the form "station_name, comp" with the comma
-inversion_type = "single_force" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, or DC_single_force_no_coupling. (if single force, greens functions must be 3 components rather than 6)
+inversion_type = "full_mt" # Inversion type can be: full_mt, DC, single_force, DC_single_force_couple, DC_single_force_no_coupling, DC_crack_couple, or single_force_crack_no_coupling. (if single force, greens functions must be 3 components rather than 6)
 perform_normallised_waveform_inversion = False ###False # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
 compare_all_waveforms_simultaneously = False # Bolean - If True, compares all waveform observations together to give one similarity value. If False, compares waveforms from individual recievers separately then combines using equally weighted average. Default = True.
 num_samples = 10000 #1000000 # Number of samples to perform Monte Carlo over
@@ -94,13 +94,13 @@ def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices
 def get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift=[]):
     """Function to load input data, depending upon inversion type. Primarily function to control use of load_input_data() function."""
     # Load input data into arrays:
-    if inversion_type=="full_mt" or inversion_type=="DC":
+    if inversion_type=="full_mt" or inversion_type=="DC" or inversion_type=="DC_crack_couple":
         real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift)
         # correct for different units of single force to DC (see note in script header):
         green_func_array = green_func_array*(10**3)
     elif inversion_type=="single_force":
         real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift)
-    elif inversion_type=="DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+    elif inversion_type=="DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "single_force_crack_no_coupling":
         real_data_array, MT_green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift)
         real_data_array, SF_green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift)
         # correct for different units of single force to DC (see note in script header):
@@ -292,9 +292,77 @@ def generate_random_DC_single_force_uncoupled_tensor():
     random_amp_frac = random.random() # random number between 0. and 1.
     random_DC_MT_normallised = random_DC_MT_normallised*random_amp_frac
     random_single_force_normallised = random_single_force_normallised*(1.-random_amp_frac)
-    # 5. --- Finally combine to tensor of length 9 ---:
+    # Finally combine to tensor of length 9:
     random_DC_single_force_uncoupled_tensor = np.vstack((random_DC_MT_normallised, random_single_force_normallised))
     return random_DC_single_force_uncoupled_tensor, random_amp_frac
+    
+def generate_random_DC_crack_coupled_tensor():
+    """Function to generate random DC-crack coupled tensor (M_11,M_22,M_33,M_12,M_13_M_23) using normal distribution projected onto a 3-sphere method. (Based on Pugh 2015,Appendix B and Muller, 1959; Marsaglia, 1972).
+    Returns a random normalised MT tensor of length 6 and the fraction amplitude of DC (0-1.).
+    Note on coupling: Coupled, i.e. DC slip vector is perpendicular to crack expansion vector."""
+    # 1. Generate random DC MT and crack MT:
+    # generate DC MT:
+    DC_MT_to_rot = np.vstack(([0.,0.,1.],[0.,0.,0.], [1.,0.,0.])) # DC moment tensor
+    # generate crack MT (from Tape 2013, eq. 41 and Fig. 6):
+    lune_perim_angle = random.random()*2.*np.pi # Random number in uniform distribution betwen 0 and 2 pi
+    crack_MT_to_rot = ((((4*(np.sin(lune_perim_angle)**2)) + (np.cos(lune_perim_angle)**2))**-0.5)/np.sqrt(3.)) * np.vstack(([np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.,0.],[0.,np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.], [0.,0.,np.cos(lune_perim_angle)+(2.*np.sqrt(2)*np.sin(lune_perim_angle))])) # crack moment tensor
+    # 2. Combine DC and crack tensors:
+    random_amp_frac = random.random() # random number between 0. and 1., for relative amplitude of DC and crack fractions.
+    DC_crack_MT_to_rot =random_amp_frac*DC_MT_to_rot + (1.-random_amp_frac)*crack_MT_to_rot
+    # 3. Randomly rotate DC-crack MT to random orientation:
+    # Get a random sample 3-vector on a 3-unit sphere to use to calculate random theta and phi rotation angles:
+    a_unnormalised = np.array([np.random.normal(loc=0.0, scale=1.0), np.random.normal(loc=0.0, scale=1.0), np.random.normal(loc=0.0, scale=1.0)], dtype=float) # Generate 3 indepdendent normal deviates
+    a_normalised = a_unnormalised/(np.sum(a_unnormalised**2)**-0.5) # Normallise sample onto unit 3-sphere - As in Muller (1959)
+    # And normallise so that vector magnitude = 1:
+    a_normalised = a_normalised/((np.sum(a_normalised**2))**0.5)
+    x = a_normalised[0]
+    y = a_normalised[1]
+    z = a_normalised[2]
+    theta = np.arccos(z)
+    phi = np.arccos(x/np.sin(theta))
+    DC_crack_MT_rotated = rot_mt_by_theta_phi(DC_crack_MT_to_rot, theta, phi)
+    # 4. Normalise and get 6 MT:
+    # Get 6 MT:
+    DC_crack_six_MT_rotated = get_six_MT_from_full_MT_array(DC_crack_MT_rotated)
+    # And normallise so that moment tensor magnitude = 1:
+    DC_crack_six_MT_rotated_normalised = DC_crack_six_MT_rotated/((np.sum(DC_crack_six_MT_rotated**2))**0.5)
+    # And set to correct dimensions (so matrix multiplication in forward model works correctly):
+    DC_crack_six_MT_rotated_normalised = np.reshape(DC_crack_six_MT_rotated_normalised, (6, 1))
+    return DC_crack_six_MT_rotated_normalised, random_amp_frac
+
+def generate_random_single_force_crack_uncoupled_tensor():
+    """Function to generate random single-force-crack uncoupled tensor (M_11,M_22,M_33,M_12,M_13_M_23F_x,F_y,F_z) using normal distribution projected onto a 3-sphere method. (Based on Pugh 2015,Appendix B and Muller, 1959; Marsaglia, 1972).
+    Returns a random normalised MT tensor of length 6 and the fraction amplitude of single-force (0-1.).
+    Note on coupling: Uncoupled, i.e. single-force vector can be at any angle relative to crack plane."""
+    # 1. Generate random single force vector and crack MT:
+    # generate random single force vector:
+    random_SF_vector = generate_random_single_force_vector()
+    # generate crack MT (from Tape 2013, eq. 41 and Fig. 6):
+    lune_perim_angle = random.random()*2.*np.pi # Random number in uniform distribution betwen 0 and 2 pi
+    crack_MT_to_rot = ((((4*(np.sin(lune_perim_angle)**2)) + (np.cos(lune_perim_angle)**2))**-0.5)/np.sqrt(3.)) * np.vstack(([np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.,0.],[0.,np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.], [0.,0.,np.cos(lune_perim_angle)+(2.*np.sqrt(2)*np.sin(lune_perim_angle))])) # crack moment tensor
+    # 2. Randomly rotate crack MT to random orientation:
+    # Get a random sample 3-vector on a 3-unit sphere to use to calculate random theta and phi rotation angles:
+    a_unnormalised = np.array([np.random.normal(loc=0.0, scale=1.0), np.random.normal(loc=0.0, scale=1.0), np.random.normal(loc=0.0, scale=1.0)], dtype=float) # Generate 3 indepdendent normal deviates
+    a_normalised = a_unnormalised/(np.sum(a_unnormalised**2)**-0.5) # Normallise sample onto unit 3-sphere - As in Muller (1959)
+    # And normallise so that vector magnitude = 1:
+    a_normalised = a_normalised/((np.sum(a_normalised**2))**0.5)
+    x = a_normalised[0]
+    y = a_normalised[1]
+    z = a_normalised[2]
+    theta = np.arccos(z)
+    phi = np.arccos(x/np.sin(theta))
+    crack_MT_rotated = rot_mt_by_theta_phi(crack_MT_to_rot, theta, phi)
+    # 3. Convert crack MT to 6 MT:
+    crack_six_MT_rotated = get_six_MT_from_full_MT_array(crack_MT_rotated)
+    # And set to correct dimensions (so matrix multiplication in forward model works correctly):
+    crack_six_MT_rotated = np.reshape(crack_six_MT_rotated, (6, 1))
+    # 4. Split the amplitude of crack to single force randomly:
+    random_amp_frac = random.random() # random number between 0. and 1.
+    random_SF_vector = random_SF_vector*random_amp_frac
+    crack_six_MT_rotated = crack_six_MT_rotated*(1.-random_amp_frac)
+    # 5. Finally combine to tensor of length 9:
+    random_crack_single_force_uncoupled_tensor = np.vstack((crack_six_MT_rotated, random_SF_vector))
+    return random_crack_single_force_uncoupled_tensor, random_amp_frac
 
 def variance_reduction(data, synth):
     """Function to perform variance reduction of data and synthetic. Based on Eq. 2.1 in Walter 2009 thesis. Originally from Templeton and Dreger 2006.
@@ -459,7 +527,7 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     # Define temp data stores for current process:
     tmp_MTs = np.zeros((len(green_func_array[0,:,0]), num_samples_per_processor), dtype=float)
     tmp_similarity_values_all_samples = np.zeros(num_samples_per_processor, dtype=float)
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         tmp_MT_single_force_rel_amps = np.zeros(num_samples_per_processor, dtype=float)
     else:
         tmp_MT_single_force_rel_amps = []
@@ -479,6 +547,12 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
         elif inversion_type == "DC_single_force_no_coupling":
             MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_DC_single_force_uncoupled_tensor()
             MT_curr_sample = MT_curr_sample*M_amplitude
+        elif inversion_type == "DC_crack_couple":
+            MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_DC_crack_coupled_tensor()
+            MT_curr_sample = MT_curr_sample*M_amplitude
+        elif inversion_type == "single_force_crack_no_coupling":
+            MT_curr_sample, random_DC_to_single_force_amp_frac = generate_random_single_force_crack_uncoupled_tensor()
+            MT_curr_sample = MT_curr_sample*M_amplitude
         synth_waveform_curr_sample = forward_model(green_func_array, MT_curr_sample) # Note: Greens functions must be of similar amplitude units going into here...
     
         # 5. Compare real data to synthetic waveform (using variance reduction or other comparison metric), to assign probability that data matches current model:
@@ -487,7 +561,7 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
         # 6. Append results to data store:
         tmp_MTs[:,i] = MT_curr_sample[:,0]
         tmp_similarity_values_all_samples[i] = similarity_curr_sample
-        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             tmp_MT_single_force_rel_amps[i] = random_DC_to_single_force_amp_frac
             
         if i % 10000 == 0:
@@ -498,7 +572,6 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     return_dict_similarity_values_all_samples[procnum] = tmp_similarity_values_all_samples
     return_dict_MT_single_force_rel_amps[procnum] = tmp_MT_single_force_rel_amps
     print "Finished processing process:", procnum, "for ", num_samples_per_processor, "samples."
-
 
 def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=1):
     """Function to use random Monte Carlo sampling of the moment tensor to derive a best fit for the moment tensor to the data.
@@ -511,7 +584,7 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     MTs = np.zeros((len(green_func_array[0,:,0]), num_samples), dtype=float)
     similarity_values_all_samples = np.zeros(num_samples, dtype=float)
     MTp = np.zeros(num_samples, dtype=float)
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         MT_single_force_rel_amps = np.zeros(num_samples, dtype=float)
     else:
         MT_single_force_rel_amps = []
@@ -541,7 +614,7 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     for procnum in range(num_processors):
         MTs[:,int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_MTs[procnum]
         similarity_values_all_samples[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_similarity_values_all_samples[procnum]
-        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             MT_single_force_rel_amps[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_MT_single_force_rel_amps[procnum]
     # From PARALLEL_worker_mc_inv function, have obtained: MTs, similarity_values_all_samples (and MT_single_force_rel_amps if required)
     
@@ -550,7 +623,7 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     MTp = similarity_values_all_samples*p_model/p_data
 
     # 8. Any final inversion specific data processing:    
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components
     
     return MTs, MTp
@@ -689,7 +762,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
     
     # And plot most likely solution:
     if plot_switch:
-        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
         else:
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
@@ -699,7 +772,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
     # And save data to MTFIT style file:
     save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir) # Saves pickled dictionary containing data from inversion
     # And save most likely solution and real data waveforms to file:
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
     else:
         synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])

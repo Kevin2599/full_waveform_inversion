@@ -540,7 +540,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
     else:
         plt.show()
         
-def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[]):
+def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[], inversion_type=""):
     """Function to get the probability distribution based on all samples for % DC vs. single force (which is the final value in MTs). Input is 10xn array of moment tensor samples and a length n array of their associated probability. Output is results plotted and shown to display or saved to file."""
     
     # Setup arrays to store data:
@@ -573,7 +573,10 @@ def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[]):
     fig = plt.figure(figsize=(8,6))
     ax1 = fig.add_subplot(111)
     plt.plot(percentage_DC_all_solns_bins[:], probability_percentage_DC_all_solns_bins[:], c='#D94411')
-    ax1.set_xlabel("Percentage DC")
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling":
+        ax1.set_xlabel("Percentage DC")
+    elif inversion_type == "single_force_crack_no_coupling":
+        ax1.set_xlabel("Percentage crack")
     ax1.set_xlim((0,100))
     ax1.set_ylim((0.,np.max(probability_percentage_DC_all_solns_bins[:])*1.05))
     ###plt.plot(percentage_DC_all_solns_bins, probability_percentage_DC_all_solns_bins, c='k')
@@ -679,6 +682,30 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
     
+    elif inversion_type == "DC_crack_couple":
+        full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
+        radiation_pattern_MT = MT_max_prob[0:6]
+        amp_prop_DC = MT_max_prob[-1] # Proportion of amplitude that is DC
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+    
+    elif inversion_type == "single_force_crack_no_coupling":
+        full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
+        radiation_pattern_MT = MT_max_prob[0:6]
+        single_force_vector_max_prob = MT_max_prob[6:9]
+        amp_prop_SF = MT_max_prob[9] # Proportion of amplitude that is DC
+        # Plot MT solutions and radiation pattern of most likely on sphere:
+        for plot_plane in ["EN","EZ","NZ"]:
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_crack_component.png"
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+        # And plot probability distribution for DC vs. single force:
+        figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"crack_vs_SF_prob_dist.png"
+        plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename, inversion_type=inversion_type)
+    
     print "Full MT (max prob.):"
     print full_MT_max_prob
     print "(For plotting radiation pattern)"
@@ -692,7 +719,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
 if __name__ == "__main__":
     
     # Specify event and inversion type:
-    inversion_type = "single_force" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
+    inversion_type = "single_force_crack_no_coupling" # can be: full_mt, DC, single_force, DC_single_force_couple, DC_single_force_no_coupling, DC_crack_couple, or single_force_crack_no_coupling.
     event_uid = "20180214185538374893" #"20140629184210365600" #"20090121042009165190" #"20171222022435216400" # Event uid (numbers in FW inversion filename)
     datadir = "./python_FW_outputs"
     radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
