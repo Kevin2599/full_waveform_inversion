@@ -510,27 +510,29 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             disp_coords = ax.transData.transform(data_xy_coords) # And transform data coords into display coords
             fig_inv = fig.transFigure.inverted() # Create inverted figure transformation
             fig_coords = fig_inv.transform((disp_coords[0],disp_coords[1])) # Transform display coords into figure coords (for adding axis)
-            # Plot line to waveform:
-            ax.plot([Y,Y_waveform_loc],[X,X_waveform_loc],c='k',alpha=0.6)
-            # And plot waveform:
-            left, bottom, width, height = [fig_coords[0]-0.15, fig_coords[1]-0.1, 0.3, 0.2]
-            # for each wf component:
-            if len(real_wfs_current_station)>1:
-                for k in range(len(real_wfs_current_station)):
-                    bottom_tmp = bottom + k*height/len(real_wfs_current_station)
-                    inset_ax_tmp = fig.add_axes([left, bottom_tmp, width, height/len(real_wfs_current_station)])
+            # Plot if waveform exists for current station:
+            if len(real_wfs_current_station)>0:
+                # Plot line to waveform:
+                ax.plot([Y,Y_waveform_loc],[X,X_waveform_loc],c='k',alpha=0.6)
+                # And plot waveform:
+                left, bottom, width, height = [fig_coords[0]-0.15, fig_coords[1]-0.1, 0.3, 0.2]
+                # for each wf component:
+                if len(real_wfs_current_station)>1:
+                    for k in range(len(real_wfs_current_station)):
+                        bottom_tmp = bottom + k*height/len(real_wfs_current_station)
+                        inset_ax_tmp = fig.add_axes([left, bottom_tmp, width, height/len(real_wfs_current_station)])
+                        #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
+                        inset_ax_tmp.plot(real_wfs_current_station[k],c='k', alpha=0.6, linewidth=0.75) # Plot real data
+                        inset_ax_tmp.plot(synth_wfs_current_station[k],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.5) # Plot synth data
+                        # inset_ax_tmp.set_ylabel(wfs_component_labels_current_station[k],loc="left",size=10)
+                        plt.title(wfs_component_labels_current_station[k],loc="left",size=8)
+                        plt.axis('off')
+                elif len(real_wfs_current_station)==1:
+                    inset_ax_tmp = fig.add_axes([left, bottom, width, height])
                     #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
-                    inset_ax_tmp.plot(real_wfs_current_station[k],c='k', alpha=0.6, linewidth=0.75) # Plot real data
-                    inset_ax_tmp.plot(synth_wfs_current_station[k],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.5) # Plot synth data
-                    # inset_ax_tmp.set_ylabel(wfs_component_labels_current_station[k],loc="left",size=10)
-                    plt.title(wfs_component_labels_current_station[k],loc="left",size=8)
+                    inset_ax_tmp.plot(real_wfs_current_station[0],c='k', alpha=0.6, linewidth=0.75) # Plot real data
+                    inset_ax_tmp.plot(synth_wfs_current_station[0],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.75) # Plot synth data
                     plt.axis('off')
-            else:
-                inset_ax_tmp = fig.add_axes([left, bottom, width, height])
-                #inset_ax1 = inset_axes(ax,width="10%",height="5%",bbox_to_anchor=(0.2,0.4))
-                inset_ax_tmp.plot(real_wfs_current_station[0],c='k', alpha=0.6, linewidth=0.75) # Plot real data
-                inset_ax_tmp.plot(synth_wfs_current_station[0],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.75) # Plot synth data
-                plt.axis('off')
         
     # And save figure if given figure filename:
     if not len(figure_filename) == 0:
@@ -691,7 +693,7 @@ if __name__ == "__main__":
     
     # Specify event and inversion type:
     inversion_type = "single_force" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
-    event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
+    event_uid = "20180214185538374893" #"20140629184210365600" #"20090121042009165190" #"20171222022435216400" # Event uid (numbers in FW inversion filename)
     datadir = "./python_FW_outputs"
     radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
     
