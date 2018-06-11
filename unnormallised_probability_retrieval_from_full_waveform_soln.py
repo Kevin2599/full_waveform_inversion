@@ -230,28 +230,9 @@ def get_unnormallised_prob_for_specific_soln(real_data_array, green_func_array, 
     prob_specific_soln = similarity_curr_sample
     
     return prob_specific_soln
-    
-# ------------------- Main script for running -------------------
-if __name__ == "__main__":
-    
-    # Plot for inversion:
-    print "Getting unnormallised probability for a particular sample"
-    
-    # Specify information needed (must match original inversion parameters):
-    # Specify event and inversion type:
-    inversion_type = "DC_single_force_no_coupling" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
-    event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
-    datadir_FW_outputs = "./python_FW_outputs" # Data directory for FW inversion outputs
-    datadir_greens_functions = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
-    real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
-    MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-    single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
-    manual_indices_time_shift = [2,1,0]
-    comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), CC-shift (cross-correlation of signal with shift allowed), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
-    perform_normallised_waveform_inversion = True # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
-    compare_all_waveforms_simultaneously = False # Bolean - If True, compares all waveform observations together to give one similarity value. If False, compares waveforms from individual recievers separately then combines using equally weighted average. Default = True.
-    
-    
+
+def run(inversion_type, event_uid, datadir_FW_outputs, datadir_FW_outputs, datadir_greens_functions, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, manual_indices_time_shift, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously):
+    """Main run function."""
     
     # Get greens function data:
     real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift)
@@ -279,6 +260,34 @@ if __name__ == "__main__":
     print "Finished processing unconstrained inversion data for:", MT_data_filename
     
     print "Finished"
+    
+    return prob_specific_soln
+    
+    
+# ------------------- Main script for running -------------------
+if __name__ == "__main__":
+    
+    # Plot for inversion:
+    print "Getting unnormallised probability for a particular sample"
+    
+    # Specify information needed (must match original inversion parameters):
+    # Specify event and inversion type:
+    inversion_type = "DC_single_force_no_coupling" # can be: full_mt, DC, single_force, DC_single_force_couple or DC_single_force_no_coupling
+    event_uid = "20171222022435216400" # Event uid (numbers in FW inversion filename)
+    datadir_FW_outputs = "./python_FW_outputs" # Data directory for FW inversion outputs
+    datadir_greens_functions = '/Users/tomhudson/Python/obspy_scripts/fk/MATLAB_inversion_scripts/test_data/output_data_for_inversion_MT_and_single_force'
+    real_data_fnames = ['real_data_RA51_z.txt', 'real_data_RA52_z.txt', 'real_data_RA53_z.txt'] # List of real waveform data files within datadir corresponding to each station (i.e. length is number of stations to invert for)
+    MT_green_func_fnames = ['green_func_array_MT_RA51_z.txt', 'green_func_array_MT_RA52_z.txt', 'green_func_array_MT_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+    single_force_green_func_fnames = ['green_func_array_single_force_RA51_z.txt', 'green_func_array_single_force_RA52_z.txt', 'green_func_array_single_force_RA53_z.txt'] # List of Green's functions data files (generated using fk code) within datadir corresponding to each station (i.e. length is number of stations to invert for)
+    manual_indices_time_shift = [2,1,0]
+    comparison_metric = "CC" # Options are VR (variation reduction), CC (cross-correlation of static signal), CC-shift (cross-correlation of signal with shift allowed), or PCC (Pearson correlation coeficient) (Note: CC is the most stable, as range is naturally from 0-1, rather than -1 to 1)
+    perform_normallised_waveform_inversion = True # Boolean - If True, performs normallised waveform inversion, whereby each synthetic and real waveform is normallised before comparision. Effectively removes overall amplitude from inversion if True. Should use True if using VR comparison method.
+    compare_all_waveforms_simultaneously = False # Bolean - If True, compares all waveform observations together to give one similarity value. If False, compares waveforms from individual recievers separately then combines using equally weighted average. Default = True.
+    
+    # And run main script:
+    prob_specific_soln = run(inversion_type, event_uid, datadir_FW_outputs, datadir_FW_outputs, datadir_greens_functions, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, manual_indices_time_shift, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously)
+    
+
     
     
     
