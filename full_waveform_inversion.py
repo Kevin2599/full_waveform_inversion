@@ -354,8 +354,6 @@ def generate_random_single_force_crack_uncoupled_tensor():
     crack_MT_rotated = rot_mt_by_theta_phi(crack_MT_to_rot, theta, phi)
     # 3. Convert crack MT to 6 MT:
     crack_six_MT_rotated = get_six_MT_from_full_MT_array(crack_MT_rotated)
-    # Normallise sample onto unit 6-sphere:
-    crack_six_MT_rotated = crack_six_MT_rotated/(np.sum(crack_six_MT_rotated**2)**0.5) # As in Muller (1959)
     # And set to correct dimensions (so matrix multiplication in forward model works correctly):
     crack_six_MT_rotated = np.reshape(crack_six_MT_rotated, (6, 1))
     # 4. Split the amplitude of crack to single force randomly:
