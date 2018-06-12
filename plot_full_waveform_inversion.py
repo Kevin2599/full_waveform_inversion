@@ -600,8 +600,322 @@ def plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=[], inve
     else:
         plt.show()
         
+# Lune plotting functions:
+def get_frac_of_MTs_using_MT_probs(MTs, MTp, frac_to_sample):
+    """Function to return fraction of MTs based on highet probabilities."""
+    num_events_to_sample = int(len(MTp)*frac_to_sample) # Take top 1 % of samples
+    sorted_indices = np.argsort(MTp)[::-1] # reorder into descending order
+    # Find indices of solutions in sample:
+    sample_indices = sorted_indices[0:num_events_to_sample]
+    MTs_sample = MTs[:,sample_indices]
+    print "Sampled",len(MTs_sample[0,:]),"out of",len(MTs[0,:]),"events"
+    return MTs_sample
 
-def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
+def find_delta_gamm_values_from_sixMT(sixMT):
+    """Function to find delta and gamma given 6 moment tensor."""
+    # Get full MT:
+    MT_current = sixMT
+    # And get full MT matrix:
+    full_MT_current = get_full_MT_array(MT_current)
+
+    # Find the eigenvalues for the MT solution and sort into descending order:
+    w,v = eigh(full_MT_current) # Find eigenvalues and associated eigenvectors for the symetric (Hermitian) MT matrix (for eigenvalue w[i], eigenvector is v[:,i])
+    full_MT_eigvals_sorted = np.sort(w)[::-1] # Sort eigenvalues into descending order
+
+    # Calculate gamma and delta (lat and lon) from the eigenvalues:
+    lambda1 = full_MT_eigvals_sorted[0]
+    lambda2 = full_MT_eigvals_sorted[1]
+    lambda3 = full_MT_eigvals_sorted[2]
+    # print (lambda1**2 + lambda2**2 + lambda3**2)**0.5 # Should = 1 if normallised correctly
+    gamma = np.arctan(((-1*lambda1) + (2*lambda2) - lambda3)/((3**0.5)*(lambda1 - lambda3))) # eq. 20a (Tape and Tape 2012)
+    beta = np.arccos((lambda1+lambda2+lambda3)/((3**0.5)*((lambda1**2 + lambda2**2 + lambda3**2)**0.5))) # eq. 20b (Tape and Tape 2012)
+    delta = (np.pi/2.) - beta # eq. 23 (Tape and Tape 2012)
+
+    return delta, gamma
+    
+def get_binned_MT_solutions_by_delta_gamma_dict(MTs, return_all_switch=False):
+    """Function to get binned MT solutions by delta and gamma value. Input is array of MTs (in (6,n) shape).
+    Output is binned dictionary containing bin values of delta and gamma and all MT solutions that are in the bin."""
+    
+    # Set up store for binned MT data:
+    gamma_delta_binned_MT_store = {} # Will have the entries: gamma_delta_binned_MT_store[delta][gamma][array of MTs (shape(6,n))]
+
+    # Setup delta-gamma bins for data:
+    bin_size_delta = np.pi/120. #np.pi/60.
+    bin_size_gamma = np.pi/120. #np.pi/60.
+    bin_value_labels_delta = np.arange(-np.pi/2,np.pi/2+bin_size_delta, bin_size_delta)
+    bin_value_labels_gamma = np.arange(-np.pi/6,np.pi/6+bin_size_gamma, bin_size_gamma)
+    bins_delta_gamma = np.zeros((len(bin_value_labels_delta), len(bin_value_labels_gamma)), dtype=float) # array to store bin values (although can also obtain from dictionary sizes)
+    
+    # And setup dict for all binned values:
+    for delta in bin_value_labels_delta:
+        for gamma in bin_value_labels_gamma:
+            try:
+                gamma_delta_binned_MT_store["delta="+str(delta)]["gamma="+str(gamma)] = {}
+            except KeyError:
+                gamma_delta_binned_MT_store["delta="+str(delta)] = {}
+                gamma_delta_binned_MT_store["delta="+str(delta)]["gamma="+str(gamma)] = {}
+    
+    # Loop over events (binning each data point):
+    for a in range(len(MTs[0,:])):
+        # Get delta and gamma values for sixMT:
+        MT_current = MTs[:,a]
+        delta, gamma = find_delta_gamm_values_from_sixMT(MT_current)
+
+        # And bin solution into approriate bin:
+        idx_delta = (np.abs(bin_value_labels_delta-delta)).argmin()
+        idx_gamma = (np.abs(bin_value_labels_gamma-gamma)).argmin()
+        bins_delta_gamma[idx_delta,idx_gamma] += 1. # Append 1 to bin
+        
+        # And add to dictionary:
+        delta_bin_label_tmp = bin_value_labels_delta[idx_delta]
+        gamma_bin_label_tmp = bin_value_labels_gamma[idx_gamma]
+        try:
+            tmp_MT_stacked_array = gamma_delta_binned_MT_store["delta="+str(delta_bin_label_tmp)]["gamma="+str(gamma_bin_label_tmp)]["MTs"]
+            gamma_delta_binned_MT_store["delta="+str(delta_bin_label_tmp)]["gamma="+str(gamma_bin_label_tmp)]["MTs"] = np.hstack((tmp_MT_stacked_array, MT_current.reshape(6,1)))
+        except KeyError:
+            gamma_delta_binned_MT_store["delta="+str(delta_bin_label_tmp)]["gamma="+str(gamma_bin_label_tmp)]["MTs"] = np.array(MT_current.reshape(6,1)) # If doesnt exist, create new MT store entry
+    
+    if return_all_switch:
+        return gamma_delta_binned_MT_store, bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma
+    else:
+        return gamma_delta_binned_MT_store
+
+def twoD_Gaussian((X, Y), amplitude, xo, yo, sigma_x, sigma_y, theta):
+    """Function describing 2D Gaussian. Pass initial guesses for gaussian parameters. Returns 1D ravelled array describing 2D Gaussian function.
+    Based on code: https://stackoverflow.com/questions/21566379/fitting-a-2d-gaussian-function-using-scipy-optimize-curve-fit-valueerror-and-m
+    X, Y are 2D np grids (from np.meshgrid)."""
+    xo = float(xo)
+    yo = float(yo)
+    amplitude = float(amplitude)
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    gau = amplitude*np.exp( - (a*((X-xo)**2) + 2*b*(X-xo)*(Y-yo) + c*((Y-yo)**2)))
+    #gau_out = gau.ravel() # Makes 2D gau array 1D, as otherwise fitting curve function won't work!
+    gau_out = np.ravel(gau) # Makes 2D gau array 1D, as otherwise fitting curve function won't work!
+    return gau_out
+
+def fit_twoD_Gaussian(x, y, data, initial_guess_switch=False, initial_guess=(1,1,1,1,1)):
+    """Function to fit 2D Gaussian to a dataset. x, y are 1D data arrays, data is a 2D array, described by x and y as labels.
+    Based on code from:
+    https://stackoverflow.com/questions/21566379/fitting-a-2d-gaussian-function-using-scipy-optimize-curve-fit-valueerror-and-m"""    
+    
+    # Mesh grid for 2D Gaussian fit:
+    Y, X = np.meshgrid(y, x)
+    
+    # Fit Gaussian to data:
+    data_ravelled = np.ravel(data)
+    if initial_guess_switch:
+        print "Initial guess parameters for 2D gaussian fit:"
+        print initial_guess
+        popt, pcov = opt.curve_fit(twoD_Gaussian, (X, Y), data_ravelled, p0=initial_guess)
+    else:
+        popt, pcov = opt.curve_fit(twoD_Gaussian, (X, Y), data_ravelled)
+    print "And final parameters derived:"
+    print popt
+    
+    # Get fitted data:
+    data_fitted = twoD_Gaussian((X, Y), *popt) # Get 2D Gaussian
+    data_fitted = np.reshape(data_fitted, np.shape(data)) # and reshape to original data dimensions
+    
+    return data_fitted
+    
+def equal_angle_stereographic_projection_conv_YZ_plane(x,y,z):
+    """Function to take 3D grid coords for a cartesian coord system and convert to 2D equal area projection."""
+    Y = y/(1+x)
+    Z = z/(1+x)
+    return Y,Z
+
+def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=[]):
+    """Function to plot Lune plot for certain inversions (if Lune plot is relevent, i.e. not DC constrained or single-force constrained).
+    Will plot sampled MT solutions on Lune, binned. Will also fit gaussian to this and return the maximum location of the gaussian and the contour coordinates. Also outputs saved figure."""
+    
+    # Get sample of MT solutions for fitting Gaussian to:
+    MTs_sample = get_frac_of_MTs_using_MT_probs(MTs, MTp, frac_to_sample)
+    
+    # Get bin values for delta-gamma space (for plotting Lune):
+    gamma_delta_binned_MT_store, bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma = get_binned_MT_solutions_by_delta_gamma_dict(MTs_sample, return_all_switch=True)
+
+    # Fit 2D gaussian to delta-gamma Lune data:
+    # Define initial guess params:
+    amplitude = np.max(bins_delta_gamma)
+    xo = 0.0
+    yo = 0.0
+    sigma_x = np.pi/6.
+    sigma_y = np.pi/8.
+    theta = np.pi/2.
+    initial_guess=(amplitude, xo, yo, sigma_x, sigma_y, theta) # Define initial guess values from data
+    # And fit gaussian:
+    bins_delta_gamma_gau_fitted = fit_twoD_Gaussian(bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma, initial_guess_switch=True, initial_guess=initial_guess)
+    
+    # Get location of maximum of Gaussian fit and 1 stdev contour:
+    # Get location of maximum:
+    max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
+    max_bin_delta_gamma_values = [bin_value_labels_delta[max_bin_delta_gamma_indices[0][0]], bin_value_labels_gamma[max_bin_delta_gamma_indices[1][0]]]
+    # Get contour:
+    contour_val = bins_delta_gamma_gau_fitted[max_bin_delta_gamma_indices[0][0], max_bin_delta_gamma_indices[1][0]]/2. #np.std(bins_delta_gamma_gau_fitted)
+    plus_minus_range = 0.05
+    contour_delta_values_indices = []
+    contour_gamma_values_indices = []
+    contour_delta_values = []
+    contour_gamma_values = []
+    for i in range(len(bins_delta_gamma_gau_fitted[:,0])):
+        for j in range(len(bins_delta_gamma_gau_fitted[0,:])):
+            if bins_delta_gamma_gau_fitted[i,j]<=contour_val*(1.+plus_minus_range) and bins_delta_gamma_gau_fitted[i,j]>=contour_val*(1.-plus_minus_range):
+                # Find contour values:
+                contour_delta_values_indices.append(i)
+                contour_gamma_values_indices.append(j)
+                contour_delta_values.append(bin_value_labels_delta[i])
+                contour_gamma_values.append(bin_value_labels_gamma[j])        
+    # And sort contour points into clockwise order:
+    pts = []
+    for i in range(len(contour_delta_values)):
+        pts.append([contour_delta_values[i], contour_gamma_values[i]])
+    origin = pts[0]
+    refvec = [0, 1]
+    # Define function for plotting contour:
+    def clockwiseangle_and_distance(point):
+        """Function to order points in clockwise order. Needs origin and refvec defined.
+        Code from: https://stackoverflow.com/questions/41855695/sorting-list-of-two-dimensional-coordinates-by-clockwise-angle-using-python"""
+        # Vector between point and the origin: v = p - o
+        vector = [point[0]-origin[0], point[1]-origin[1]]
+        # Length of vector: ||v||
+        lenvector = math.hypot(vector[0], vector[1])
+        # If length is zero there is no angle
+        if lenvector == 0:
+            return -math.pi, 0
+        # Normalize vector: v/||v||
+        normalized = [vector[0]/lenvector, vector[1]/lenvector]
+        dotprod  = normalized[0]*refvec[0] + normalized[1]*refvec[1]     # x1*x2 + y1*y2
+        diffprod = refvec[1]*normalized[0] - refvec[0]*normalized[1]     # x1*y2 - y1*x2
+        angle = math.atan2(diffprod, dotprod)
+        # Negative angles represent counter-clockwise angles so we need to subtract them 
+        # from 2*pi (360 degrees)
+        if angle < 0:
+            return 2*math.pi+angle, lenvector
+        # I return first the angle because that's the primary sorting criterium
+        # but if two vectors have the same angle then the shorter distance should come first.
+        return angle, lenvector
+    contour_bin_delta_gamma_values_sorted = sorted(pts, key=clockwiseangle_and_distance) # Sorts points into clockwise order
+    contour_bin_delta_gamma_values_sorted.append(contour_bin_delta_gamma_values_sorted[0]) # Append first point again to make circle
+    
+    # And plot:
+    print "Plotting Lune with fitted Gaussian"
+    # Set up figure:
+    fig = plt.figure(figsize=(8,8))
+    ax = fig.add_subplot(111)
+    # Plot major gridlines:
+    for phi in [-np.pi/6., np.pi/6.]:
+        theta_range = np.linspace(0.0,np.pi,180)
+        phi_range = np.ones(len(theta_range))*phi
+        r_range = np.ones(len(theta_range))
+        # And convert to 2D projection:
+        x,y,z = convert_spherical_coords_to_cartesian_coords(r_range,theta_range,phi_range)
+        Y_range,Z_range = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+        ax.plot(Y_range,Z_range, color="black")
+    # Plot horizontal minor grid lines:
+    minor_horiz_interval = np.pi/12.
+    for theta in np.arange(0.+minor_horiz_interval, np.pi+minor_horiz_interval, minor_horiz_interval):
+        phi_range = np.linspace(-np.pi/6,np.pi/6,90)
+        theta_range = np.ones(len(phi_range))*theta
+        r_range = np.ones(len(theta_range))
+        # And convert to 2D projection:
+        x,y,z = convert_spherical_coords_to_cartesian_coords(r_range,theta_range,phi_range)
+        Y_range,Z_range = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+        ax.plot(Y_range,Z_range, color="black", linestyle="--", alpha=0.5)
+    # Plot vertical minor gridlines:
+    minor_vert_interval = np.pi/24.
+    for phi in np.arange(-np.pi/6+minor_vert_interval, np.pi/6, minor_vert_interval):
+        theta_range = np.linspace(0.0,np.pi,180)
+        phi_range = np.ones(len(theta_range))*phi
+        r_range = np.ones(len(theta_range))
+        # And convert to 2D projection:
+        x,y,z = convert_spherical_coords_to_cartesian_coords(r_range,theta_range,phi_range)
+        Y_range,Z_range = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+        ax.plot(Y_range,Z_range, color="black", linestyle="--", alpha=0.5)
+
+    # And plot binned data, colored by bin value:
+    bins_delta_gamma_normallised = bins_delta_gamma/np.max(bins_delta_gamma) # Normalise data
+    # Loop over binned data points:
+    for i in range(len(bin_value_labels_delta)):
+        for j in range(len(bin_value_labels_gamma)):
+            delta = bin_value_labels_delta[i]
+            gamma = bin_value_labels_gamma[j]
+            # And plot data coord:
+            x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - delta,gamma)
+            Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+            ax.scatter(Y,Z, color = matplotlib.cm.jet(int(bins_delta_gamma_normallised[i,j]*256)), alpha=0.6,s=50)
+        print i
+
+    # # Plot maximum location and associated contours associated with Guassian fit:
+    # # Plot maximum location:
+    # delta = max_bin_delta_gamma_values[0]
+    # gamma = max_bin_delta_gamma_values[1]
+    # x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - delta,gamma)
+    # Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+    # ax.scatter(Y,Z, color = "green", alpha=1.0,s=50, marker="X")
+    # # And plot 1 stdev contour:
+    # contour_bin_delta_values_sorted = []
+    # contour_bin_gamma_values_sorted = []
+    # for i in range(len(contour_bin_delta_gamma_values_sorted)):
+    #     contour_bin_delta_values_sorted.append(contour_bin_delta_gamma_values_sorted[i][0])
+    #     contour_bin_gamma_values_sorted.append(contour_bin_delta_gamma_values_sorted[i][1])
+    # delta = np.array(contour_bin_delta_values_sorted)
+    # gamma = np.array(contour_bin_gamma_values_sorted)
+    # x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - delta,gamma)
+    # Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+    # ax.plot(Y,Z, color = "green", alpha=0.5)
+    
+    # Plot location of maximum probability single MT solution (passed as argument):
+    if len(six_MT_max_prob)>0:
+        delta, gamma = find_delta_gamm_values_from_sixMT(six_MT_max_prob)
+        # And plot data coord:
+        x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - delta,gamma)
+        Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+        ax.scatter(Y,Z, c="gold", alpha=0.8,s=250, marker="*")
+    
+    # And Finish plot:
+    # Plot labels for various defined locations (locations from Tape and Tape 2012, table 1):
+    plt.scatter(0.,1.,s=50,color="black")
+    plt.text(0.,1.,"Explosion", fontsize=12, horizontalalignment="center", verticalalignment='bottom')
+    plt.scatter(0.,-1.,s=50,color="black")
+    plt.text(0.,-1.,"Implosion", fontsize=12, horizontalalignment="center", verticalalignment='top')
+    x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - np.arcsin(5/np.sqrt(33)),-np.pi/6.)
+    Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+    plt.scatter(Y,Z,s=50,color="red")
+    plt.text(Y,Z,"TC$^+$",color="red", fontsize=12, horizontalalignment="right", verticalalignment='bottom')
+    x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) + np.arcsin(5/np.sqrt(33)),np.pi/6.)
+    Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+    plt.scatter(Y,Z,s=50,color="red")
+    plt.text(Y,Z,"TC$^-$",color="red", fontsize=12, horizontalalignment="left", verticalalignment='top')
+    plt.scatter(0.,0.,s=50,color="red")
+    plt.text(0.,0.,"DC",color="red", fontsize=12, horizontalalignment="center", verticalalignment='top')
+    # Various tidying:
+    ax.set_xlim(-1.,1.)
+    ax.set_ylim(-1.,1.)
+    plt.axis('off')
+    # And save figure if given figure filename:
+    if not len(figure_filename) == 0:
+        plt.savefig(figure_filename, dpi=600)
+    else:
+        plt.show()
+    
+    # And return MT data at maximum (and mts within contour?!):
+    print "And getting MT data at maximum of gaussian to return (and mts within contour?!)"
+    # Get all solutions associated with bins inside contour on Lune plot:
+    gamma_delta_binned_MT_store = get_binned_MT_solutions_by_delta_gamma_dict(MTs_sample) # Returns dictionary of all MTs binned by gamma, delta value
+    # And get all values associated with gaussian maximum on Lune plot:
+    max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
+    max_bin_delta_gamma_values = [bin_value_labels_delta[max_bin_delta_gamma_indices[0][0]], bin_value_labels_gamma[max_bin_delta_gamma_indices[1][0]]]
+    delta = max_bin_delta_gamma_values[0]
+    gamma = max_bin_delta_gamma_values[1]
+    MTs_max_gau_loc = gamma_delta_binned_MT_store["delta="+str(delta)]["gamma="+str(gamma)]["MTs"] # MT solutions associated with gaussian maximum (note: may be different to maximum value due to max value being fit rather than real value)
+    
+    return MTs_max_gau_loc
+        
+
+def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True):
     """Function to run main script."""
     
     # Plot for inversion:
@@ -632,6 +946,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
             plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+        # And plot Lune for solution:
+        if plot_Lune_switch:
+            plot_Lune(MTs, MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")
     
     elif inversion_type == "DC":
         # And get full MT matrix:
@@ -690,7 +1007,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
             plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
-    
+        # And plot Lune for solution:
+        if plot_Lune_switch:
+            plot_Lune(MTs[0:6,:], MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")    
+        
     elif inversion_type == "single_force_crack_no_coupling":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
         radiation_pattern_MT = MT_max_prob[0:6]
@@ -705,6 +1025,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P"):
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"crack_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename, inversion_type=inversion_type)
+        # And plot Lune for solution:
+        if plot_Lune_switch:
+            plot_Lune(MTs[0:6,:], MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_Lune.png")
     
     print "Full MT (max prob.):"
     print full_MT_max_prob
@@ -723,8 +1046,9 @@ if __name__ == "__main__":
     event_uid = "20180214185538374893" #"20140629184210365600" #"20090121042009165190" #"20171222022435216400" # Event uid (numbers in FW inversion filename)
     datadir = "./python_FW_outputs"
     radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
+    plot_Lune_switch = True # If True, plots Lune
     
-    run(inversion_type, event_uid, datadir, radiation_MT_phase="P")
+    run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=plot_Lune_switch)
 
     
     
