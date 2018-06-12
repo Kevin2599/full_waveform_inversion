@@ -749,56 +749,56 @@ def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=
     # And fit gaussian:
     bins_delta_gamma_gau_fitted = fit_twoD_Gaussian(bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma, initial_guess_switch=True, initial_guess=initial_guess)
     
-    # Get location of maximum of Gaussian fit and 1 stdev contour:
-    # Get location of maximum:
-    max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
-    max_bin_delta_gamma_values = [bin_value_labels_delta[max_bin_delta_gamma_indices[0][0]], bin_value_labels_gamma[max_bin_delta_gamma_indices[1][0]]]
-    # Get contour:
-    contour_val = bins_delta_gamma_gau_fitted[max_bin_delta_gamma_indices[0][0], max_bin_delta_gamma_indices[1][0]]/2. #np.std(bins_delta_gamma_gau_fitted)
-    plus_minus_range = 0.05
-    contour_delta_values_indices = []
-    contour_gamma_values_indices = []
-    contour_delta_values = []
-    contour_gamma_values = []
-    for i in range(len(bins_delta_gamma_gau_fitted[:,0])):
-        for j in range(len(bins_delta_gamma_gau_fitted[0,:])):
-            if bins_delta_gamma_gau_fitted[i,j]<=contour_val*(1.+plus_minus_range) and bins_delta_gamma_gau_fitted[i,j]>=contour_val*(1.-plus_minus_range):
-                # Find contour values:
-                contour_delta_values_indices.append(i)
-                contour_gamma_values_indices.append(j)
-                contour_delta_values.append(bin_value_labels_delta[i])
-                contour_gamma_values.append(bin_value_labels_gamma[j])        
-    # And sort contour points into clockwise order:
-    pts = []
-    for i in range(len(contour_delta_values)):
-        pts.append([contour_delta_values[i], contour_gamma_values[i]])
-    origin = pts[0]
-    refvec = [0, 1]
-    # Define function for plotting contour:
-    def clockwiseangle_and_distance(point):
-        """Function to order points in clockwise order. Needs origin and refvec defined.
-        Code from: https://stackoverflow.com/questions/41855695/sorting-list-of-two-dimensional-coordinates-by-clockwise-angle-using-python"""
-        # Vector between point and the origin: v = p - o
-        vector = [point[0]-origin[0], point[1]-origin[1]]
-        # Length of vector: ||v||
-        lenvector = math.hypot(vector[0], vector[1])
-        # If length is zero there is no angle
-        if lenvector == 0:
-            return -math.pi, 0
-        # Normalize vector: v/||v||
-        normalized = [vector[0]/lenvector, vector[1]/lenvector]
-        dotprod  = normalized[0]*refvec[0] + normalized[1]*refvec[1]     # x1*x2 + y1*y2
-        diffprod = refvec[1]*normalized[0] - refvec[0]*normalized[1]     # x1*y2 - y1*x2
-        angle = math.atan2(diffprod, dotprod)
-        # Negative angles represent counter-clockwise angles so we need to subtract them 
-        # from 2*pi (360 degrees)
-        if angle < 0:
-            return 2*math.pi+angle, lenvector
-        # I return first the angle because that's the primary sorting criterium
-        # but if two vectors have the same angle then the shorter distance should come first.
-        return angle, lenvector
-    contour_bin_delta_gamma_values_sorted = sorted(pts, key=clockwiseangle_and_distance) # Sorts points into clockwise order
-    contour_bin_delta_gamma_values_sorted.append(contour_bin_delta_gamma_values_sorted[0]) # Append first point again to make circle
+    # # Get location of maximum of Gaussian fit and 1 stdev contour:
+    # # Get location of maximum:
+    # max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
+    # max_bin_delta_gamma_values = [bin_value_labels_delta[max_bin_delta_gamma_indices[0][0]], bin_value_labels_gamma[max_bin_delta_gamma_indices[1][0]]]
+    # # Get contour:
+    # contour_val = bins_delta_gamma_gau_fitted[max_bin_delta_gamma_indices[0][0], max_bin_delta_gamma_indices[1][0]]/2. #np.std(bins_delta_gamma_gau_fitted)
+    # plus_minus_range = 0.05
+    # contour_delta_values_indices = []
+    # contour_gamma_values_indices = []
+    # contour_delta_values = []
+    # contour_gamma_values = []
+    # for i in range(len(bins_delta_gamma_gau_fitted[:,0])):
+    #     for j in range(len(bins_delta_gamma_gau_fitted[0,:])):
+    #         if bins_delta_gamma_gau_fitted[i,j]<=contour_val*(1.+plus_minus_range) and bins_delta_gamma_gau_fitted[i,j]>=contour_val*(1.-plus_minus_range):
+    #             # Find contour values:
+    #             contour_delta_values_indices.append(i)
+    #             contour_gamma_values_indices.append(j)
+    #             contour_delta_values.append(bin_value_labels_delta[i])
+    #             contour_gamma_values.append(bin_value_labels_gamma[j])
+    # # And sort contour points into clockwise order:
+    # pts = []
+    # for i in range(len(contour_delta_values)):
+    #     pts.append([contour_delta_values[i], contour_gamma_values[i]])
+    # origin = pts[0]
+    # refvec = [0, 1]
+    # # Define function for plotting contour:
+    # def clockwiseangle_and_distance(point):
+    #     """Function to order points in clockwise order. Needs origin and refvec defined.
+    #     Code from: https://stackoverflow.com/questions/41855695/sorting-list-of-two-dimensional-coordinates-by-clockwise-angle-using-python"""
+    #     # Vector between point and the origin: v = p - o
+    #     vector = [point[0]-origin[0], point[1]-origin[1]]
+    #     # Length of vector: ||v||
+    #     lenvector = math.hypot(vector[0], vector[1])
+    #     # If length is zero there is no angle
+    #     if lenvector == 0:
+    #         return -math.pi, 0
+    #     # Normalize vector: v/||v||
+    #     normalized = [vector[0]/lenvector, vector[1]/lenvector]
+    #     dotprod  = normalized[0]*refvec[0] + normalized[1]*refvec[1]     # x1*x2 + y1*y2
+    #     diffprod = refvec[1]*normalized[0] - refvec[0]*normalized[1]     # x1*y2 - y1*x2
+    #     angle = math.atan2(diffprod, dotprod)
+    #     # Negative angles represent counter-clockwise angles so we need to subtract them
+    #     # from 2*pi (360 degrees)
+    #     if angle < 0:
+    #         return 2*math.pi+angle, lenvector
+    #     # I return first the angle because that's the primary sorting criterium
+    #     # but if two vectors have the same angle then the shorter distance should come first.
+    #     return angle, lenvector
+    # contour_bin_delta_gamma_values_sorted = sorted(pts, key=clockwiseangle_and_distance) # Sorts points into clockwise order
+    # contour_bin_delta_gamma_values_sorted.append(contour_bin_delta_gamma_values_sorted[0]) # Append first point again to make circle
     
     # And plot:
     print "Plotting Lune with fitted Gaussian"
