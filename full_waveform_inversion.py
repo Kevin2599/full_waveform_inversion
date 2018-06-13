@@ -308,17 +308,36 @@ def generate_random_DC_crack_coupled_tensor():
     DC_MT_to_rot = np.vstack(([0.,0.,1.],[0.,0.,0.], [1.,0.,0.])) # DC moment tensor
     # generate crack MT (from Tape 2013, eq. 41 and Fig. 6):
     # To randomly generate lune_perim_angle (from Tape 2013 eq. 41 and Fig. 6):
+    # --- To randomly generate lune_perim_angle (from Tape 2013 eq. 41 and Fig. 6) ---:
+    # Get between small range:
+    theta_lune_sphere = np.random.uniform(-1.,1.)*np.pi/2.
     random_num = random.random()
     if random_num <= 0.5:
-        theta_lune_sphere = random.random()*np.pi/2.
+        phi_lune_sphere = 0. #np.pi/6. #0. #np.pi/6.
     elif random_num > 0.5:
-        theta_lune_sphere = -1.*random.random()*np.pi/2.
-    random_num = random.random()
-    if random_num <= 0.5:
-        phi_lune_sphere = np.pi/6.
-    elif random_num > 0.5:
-        phi_lune_sphere = -1.*np.pi/6.
+        phi_lune_sphere = np.pi/3 #-1.*np.pi/6. #np.pi/3 #-1.*np.pi/6.
+    # calculate lune_perim_angle, allowing for outside tan(-pi/2->pi/2):
     lune_perim_angle = np.arctan(np.sin(phi_lune_sphere)/np.sin(theta_lune_sphere)) # Generates uniform distribution of lune crack angle in Lune plot space #random.random()*2.*np.pi # Random number in uniform distribution betwen 0 and 2 pi
+    # And redistribute evenly everywhere on boundary:
+    random_num = random.random()
+    if random_num>0.25 and random_num<=0.5:
+        lune_perim_angle = lune_perim_angle+np.pi # Allow to use full 2 pi space
+    if random_num>0.5 and random_num<=0.75:
+        lune_perim_angle = lune_perim_angle+np.pi/2 # Allow to use full 2 pi space
+    if random_num>0.75 and random_num<=1.0:
+        lune_perim_angle = lune_perim_angle+3*np.pi/2 # Allow to use full 2 pi space
+    # --- ---
+    # random_num = random.random()
+    # if random_num <= 0.5:
+    #     theta_lune_sphere = random.random()*np.pi/2.
+    # elif random_num > 0.5:
+    #     theta_lune_sphere = -1.*random.random()*np.pi/2.
+    # random_num = random.random()
+    # if random_num <= 0.5:
+    #     phi_lune_sphere = np.pi/6.
+    # elif random_num > 0.5:
+    #     phi_lune_sphere = -1.*np.pi/6.
+    # lune_perim_angle = np.arctan(np.sin(phi_lune_sphere)/np.sin(theta_lune_sphere)) # Generates uniform distribution of lune crack angle in Lune plot space #random.random()*2.*np.pi # Random number in uniform distribution betwen 0 and 2 pi
     crack_MT_to_rot = ((((4*(np.sin(lune_perim_angle)**2)) + (np.cos(lune_perim_angle)**2))**-0.5)/np.sqrt(3.)) * np.vstack(([np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.,0.],[0.,np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.], [0.,0.,np.cos(lune_perim_angle)+(2.*np.sqrt(2)*np.sin(lune_perim_angle))])) # crack moment tensor
     # 2. Combine DC and crack tensors:
     random_amp_frac = random.random() # random number between 0. and 1., for relative amplitude of DC and crack fractions.
@@ -353,17 +372,36 @@ def generate_random_single_force_crack_uncoupled_tensor():
     random_SF_vector = generate_random_single_force_vector()
     # generate crack MT (from Tape 2013, eq. 41 and Fig. 6):
     # To randomly generate lune_perim_angle (from Tape 2013 eq. 41 and Fig. 6):
+    # --- To randomly generate lune_perim_angle (from Tape 2013 eq. 41 and Fig. 6) ---:
+    # Get between small range:
+    theta_lune_sphere = np.random.uniform(-1.,1.)*np.pi/2.
     random_num = random.random()
     if random_num <= 0.5:
-        theta_lune_sphere = random.random()*np.pi/2.
+        phi_lune_sphere = 0. #np.pi/6. #0. #np.pi/6.
     elif random_num > 0.5:
-        theta_lune_sphere = -1.*random.random()*np.pi/2.
-    random_num = random.random()
-    if random_num <= 0.5:
-        phi_lune_sphere = np.pi/6.
-    elif random_num > 0.5:
-        phi_lune_sphere = -1.*np.pi/6.
+        phi_lune_sphere = np.pi/3 #-1.*np.pi/6. #np.pi/3 #-1.*np.pi/6.
+    # calculate lune_perim_angle, allowing for outside tan(-pi/2->pi/2):
     lune_perim_angle = np.arctan(np.sin(phi_lune_sphere)/np.sin(theta_lune_sphere)) # Generates uniform distribution of lune crack angle in Lune plot space #random.random()*2.*np.pi # Random number in uniform distribution betwen 0 and 2 pi
+    # And redistribute evenly everywhere on boundary:
+    random_num = random.random()
+    if random_num>0.25 and random_num<=0.5:
+        lune_perim_angle = lune_perim_angle+np.pi # Allow to use full 2 pi space
+    if random_num>0.5 and random_num<=0.75:
+        lune_perim_angle = lune_perim_angle+np.pi/2 # Allow to use full 2 pi space
+    if random_num>0.75 and random_num<=1.0:
+        lune_perim_angle = lune_perim_angle+3*np.pi/2 # Allow to use full 2 pi space
+    # --- ---
+    # random_num = random.random()
+    # if random_num <= 0.5:
+    #     theta_lune_sphere = random.random()*np.pi/2.
+    # elif random_num > 0.5:
+    #     theta_lune_sphere = -1.*random.random()*np.pi/2.
+    # random_num = random.random()
+    # if random_num <= 0.5:
+    #     phi_lune_sphere = np.pi/6.
+    # elif random_num > 0.5:
+    #     phi_lune_sphere = -1.*np.pi/6.
+    # lune_perim_angle = np.arctan(np.sin(phi_lune_sphere)/np.sin(theta_lune_sphere)) # Generates uniform distribution of lune crack angle in Lune plot space #random.random()*2.*np.pi # Random number in uniform distribution betwen 0 and 2 pi
     crack_MT_to_rot = ((((4*(np.sin(lune_perim_angle)**2)) + (np.cos(lune_perim_angle)**2))**-0.5)/np.sqrt(3.)) * np.vstack(([np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.,0.],[0.,np.cos(lune_perim_angle)-(np.sqrt(2)*np.sin(lune_perim_angle)),0.], [0.,0.,np.cos(lune_perim_angle)+(2.*np.sqrt(2)*np.sin(lune_perim_angle))])) # crack moment tensor
     # 2. Randomly rotate crack MT to random orientation:
     # Get a random sample 3-vector on a 3-unit sphere to use to calculate random theta and phi rotation angles:
