@@ -737,18 +737,18 @@ def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=
     # Get bin values for delta-gamma space (for plotting Lune):
     gamma_delta_binned_MT_store, bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma = get_binned_MT_solutions_by_delta_gamma_dict(MTs_sample, return_all_switch=True)
 
-    # Fit 2D gaussian to delta-gamma Lune data:
-    # Define initial guess params:
-    amplitude = np.max(bins_delta_gamma)
-    xo = 0.0
-    yo = 0.0
-    sigma_x = np.pi/6.
-    sigma_y = np.pi/8.
-    theta = np.pi/2.
-    initial_guess=(amplitude, xo, yo, sigma_x, sigma_y, theta) # Define initial guess values from data
-    # And fit gaussian:
-    bins_delta_gamma_gau_fitted = fit_twoD_Gaussian(bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma, initial_guess_switch=True, initial_guess=initial_guess)
-    
+    # # Fit 2D gaussian to delta-gamma Lune data:
+    # # Define initial guess params:
+    # amplitude = np.max(bins_delta_gamma)
+    # xo = 0.0
+    # yo = 0.0
+    # sigma_x = np.pi/6.
+    # sigma_y = np.pi/8.
+    # theta = np.pi/2.
+    # initial_guess=(amplitude, xo, yo, sigma_x, sigma_y, theta) # Define initial guess values from data
+    # # And fit gaussian:
+    # bins_delta_gamma_gau_fitted = fit_twoD_Gaussian(bin_value_labels_delta, bin_value_labels_gamma, bins_delta_gamma, initial_guess_switch=True, initial_guess=initial_guess)
+    #
     # # Get location of maximum of Gaussian fit and 1 stdev contour:
     # # Get location of maximum:
     # max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
@@ -842,10 +842,11 @@ def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=
         for j in range(len(bin_value_labels_gamma)):
             delta = bin_value_labels_delta[i]
             gamma = bin_value_labels_gamma[j]
-            # And plot data coord:
-            x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - delta,gamma)
-            Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
-            ax.scatter(Y,Z, color = matplotlib.cm.jet(int(bins_delta_gamma_normallised[i,j]*256)), alpha=0.6,s=50)
+            # And plot data coord (if bin greater than 0):
+            if bins_delta_gamma_normallised[i,j]>0.:
+                x,y,z = convert_spherical_coords_to_cartesian_coords(1.,(np.pi/2.) - delta,gamma)
+                Y,Z = equal_angle_stereographic_projection_conv_YZ_plane(x,y,z)
+                ax.scatter(Y,Z, color = matplotlib.cm.jet(int(bins_delta_gamma_normallised[i,j]*256)), alpha=0.6,s=50)
         print i
 
     # # Plot maximum location and associated contours associated with Guassian fit:
@@ -901,18 +902,18 @@ def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=
     else:
         plt.show()
     
-    # And return MT data at maximum (and mts within contour?!):
-    print "And getting MT data at maximum of gaussian to return (and mts within contour?!)"
-    # Get all solutions associated with bins inside contour on Lune plot:
-    gamma_delta_binned_MT_store = get_binned_MT_solutions_by_delta_gamma_dict(MTs_sample) # Returns dictionary of all MTs binned by gamma, delta value
-    # And get all values associated with gaussian maximum on Lune plot:
-    max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
-    max_bin_delta_gamma_values = [bin_value_labels_delta[max_bin_delta_gamma_indices[0][0]], bin_value_labels_gamma[max_bin_delta_gamma_indices[1][0]]]
-    delta = max_bin_delta_gamma_values[0]
-    gamma = max_bin_delta_gamma_values[1]
-    MTs_max_gau_loc = gamma_delta_binned_MT_store["delta="+str(delta)]["gamma="+str(gamma)]["MTs"] # MT solutions associated with gaussian maximum (note: may be different to maximum value due to max value being fit rather than real value)
-    
-    return MTs_max_gau_loc
+    # # And return MT data at maximum (and mts within contour?!):
+    # print "And getting MT data at maximum of gaussian to return (and mts within contour?!)"
+    # # Get all solutions associated with bins inside contour on Lune plot:
+    # gamma_delta_binned_MT_store = get_binned_MT_solutions_by_delta_gamma_dict(MTs_sample) # Returns dictionary of all MTs binned by gamma, delta value
+    # # And get all values associated with gaussian maximum on Lune plot:
+    # max_bin_delta_gamma_indices = np.where(bins_delta_gamma_gau_fitted==np.max(bins_delta_gamma_gau_fitted))
+    # max_bin_delta_gamma_values = [bin_value_labels_delta[max_bin_delta_gamma_indices[0][0]], bin_value_labels_gamma[max_bin_delta_gamma_indices[1][0]]]
+    # delta = max_bin_delta_gamma_values[0]
+    # gamma = max_bin_delta_gamma_values[1]
+    # MTs_max_gau_loc = gamma_delta_binned_MT_store["delta="+str(delta)]["gamma="+str(gamma)]["MTs"] # MT solutions associated with gaussian maximum (note: may be different to maximum value due to max value being fit rather than real value)
+    #
+    # return MTs_max_gau_loc
         
 
 def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True):
