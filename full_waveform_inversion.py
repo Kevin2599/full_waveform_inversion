@@ -772,7 +772,7 @@ def remove_zero_prob_results(MTp, MTs):
     """Function to remove zero probability results from FW outputs. Inputs are: MTp - array containing probability values for each solution; MTs - array containing MT inversion information."""
     non_zero_indices = np.argwhere(MTp>0.)
     MTs_out = np.take(MTs, non_zero_indices, axis=1)[:,:,0] # Get non-zero MT solutions only
-    MTp_out = MTp[non_zero_indices]
+    MTp_out = MTp[non_zero_indices][:,0]
     return MTp_out, MTs_out
     
 def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir):
