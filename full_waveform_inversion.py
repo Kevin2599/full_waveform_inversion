@@ -61,6 +61,7 @@ manual_indices_time_shift_SF = [22, 22, 21, 22, 24, 23, 23, 22, 22, 21, 22, 24, 
 nlloc_hyp_filename = "NLLoc_data/loc.20180214.185538.grid0.loc.hyp" ##"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" #"NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" #"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 plot_switch = True # If True, will plot outputs to screen
 num_processors = 1 #1 # Number of processors to run for (default is 1)
+only_save_non_zero_solns_switch = False # If True, will only save results with a non-zero probability.
 
 
 # ------------------- Define various functions used in script -------------------
@@ -766,6 +767,13 @@ def get_event_uid_and_station_data_MTFIT_FORMAT_from_nonlinloc_hyp_file(nlloc_hy
     #stations = np.array(stations) # HERE!!! (need to find out what type of object stations is!)
     
     return uid, stations
+
+def remove_zero_prob_results(MTp, MTs):
+    """Function to remove zero probability results from FW outputs. Inputs are: MTp - array containing probability values for each solution; MTs - array containing MT inversion information."""
+    non_zero_indices = np.argwhere(MTp>0.)
+    MTs_out = np.take(MTs, non_zero_indices, axis=1)[:,:,0] # Get non-zero MT solutions only
+    MTp_out = MTp[non_zero_indices]
+    return MTp_out, MTs_out
     
 def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir):
     """Function to save data to MTFIT style file, containing arrays of uid, MTs (array of 6xn for possible MT solutions), MTp (array of length n storing probabilities of each solution) and stations (station name, azimuth, takeoff angle, polarity (set to zero here)).
@@ -799,7 +807,7 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
     
     
-def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch=False, num_processors=1):
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch=False, num_processors=1, only_save_non_zero_solns_switch=False):
     """Function to run the inversion script."""
     # Load input data (completely, for specific inversion type):
     real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF)
@@ -822,6 +830,10 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
     if math.isnan(MTp[0]):
         print "Error: Sum of probabilities is equal to zero - therefore no adiquate solution could be found and inversion is terminating."
         sys.exit()
+        
+    # Remove zero probability values if specified:
+    if only_save_non_zero_solns_switch:
+        MTp, MTs = remove_zero_prob_results(MTp, MTs)
     
     # And plot most likely solution:
     if plot_switch:
@@ -849,7 +861,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
     # Run functions via main run function:
-    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch, num_processors)
+    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch, num_processors, only_save_non_zero_solns_switch)
 
 
 
