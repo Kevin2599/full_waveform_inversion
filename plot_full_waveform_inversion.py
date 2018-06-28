@@ -297,7 +297,7 @@ def plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_p
     """Function for plotting single force vector on beachball style plot."""
     
     # normalise:
-    single_force_vector_to_plot = single_force_vector_to_plot/np.max(np.absolute(single_force_vector_to_plot))
+    single_force_vector_to_plot = single_force_vector_to_plot/np.sqrt(single_force_vector_to_plot[0]**2 + single_force_vector_to_plot[1]**2 + single_force_vector_to_plot[2]**2) #np.max(np.absolute(single_force_vector_to_plot))
     
     # Convert 3D vector to 2D plane coords:
     # Note: Single force vector in is is NED format
@@ -317,7 +317,174 @@ def plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_p
     
     return ax
 
-def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", radiation_MT_phase="P", plot_plane="EN"):
+def convert_cart_coords_to_spherical_coords(x,y,z):
+    """Function to convert cartesian coords to spherical coords."""
+    r = np.sqrt(x**2 + y**2 + z**2) # Get radius
+    theta = np.arccos(z/r) # Get theta (angle from +ve vertical)
+    # Get phi (angle from +ve x):
+    if y==0:
+        if x>=0:
+            phi = 0.
+        elif x<0:
+            phi = np.pi
+    elif y>0:
+        phi = np.arccos(x/(r*np.sin(theta)))
+    elif y<0:
+        phi = (2.*np.pi) - np.arccos(x/(r*np.sin(theta)))
+    return r, theta, phi
+    
+def shift_twoD_data_array_to_have_max_in_centre(twoD_array, axis_0_labels, axis_1_labels):
+    """Function to do 2D roll of data to shift maximum value to centre of array, rolling 2D array and array labels."""
+    # Find maximum:
+    axis_0_max_idx = np.where(twoD_array==np.max(twoD_array))[0][0]
+    axis_1_max_idx = np.where(twoD_array==np.max(twoD_array))[1][0]
+    # Find centre coords:
+    axis_0_centre_idx = int(len(twoD_array[:,0])/2.)
+    axis_1_centre_idx = int(len(twoD_array[0,:])/2.)
+    # Get roll amounts:
+    axis_0_roll_amount = axis_0_centre_idx - axis_0_max_idx
+    axis_1_roll_amount = axis_1_centre_idx - axis_1_max_idx
+    # Roll axis 0:
+    twoD_array = np.roll(twoD_array, axis_0_roll_amount, axis=0)
+    axis_0_labels = np.roll(axis_0_labels, axis_0_roll_amount)
+    # Roll axis 1:
+    twoD_array = np.roll(twoD_array, axis_1_roll_amount, axis=1)
+    axis_1_labels = np.roll(axis_1_labels, axis_1_roll_amount)
+    return twoD_array, axis_0_labels, axis_1_labels
+
+def get_uncertainty_estimate_bounds_full_soln(MTs, MTp, inversion_type, n_data_frac=0.1, use_gau_fit=False):
+    """Function to get uncertainty estimate of the direction/orientation of the radiation pattern.
+    Currently takes a fraction of the data (e.g. 10%) and fits a Gaussian to the data, taking the full width half maximum as the measure (more representatitive than the standard deviation.)
+    Returns the upper and lower bounds of the uncertainty in direction in terms of theta and phi as well as x,y,z.
+    Note: Currently doesn't centre data for fitting gaussian."""
+    
+    # Get top n solutions:
+    num_data_samples = int(n_data_frac*len(MTp))
+    MT_indices = MTp.argsort()[-int(num_data_samples):][::-1] # Get indices of sorted array
+    MTs_to_process = MTs[:,MT_indices]
+    MTp_to_process = MTp[MT_indices]
+    
+    # Create 2D array bin for data:
+    num_degrees_per_bin = 5
+    theta_phi_bins = np.zeros((int(180/num_degrees_per_bin), int(360/num_degrees_per_bin)), dtype=float)
+    theta_bin_labels = np.arange(0.+(np.pi/180.)/2., np.pi, num_degrees_per_bin*np.pi/180.)
+    phi_bin_labels = np.arange(0.+(np.pi/360.)/2., 2.*np.pi, num_degrees_per_bin*2.*np.pi/360.)
+    
+    # Get x,y,z coords of slip vector/single force vector (depending upon inversion type):
+    # Note: x,y,z in NED coordinate system.
+    if inversion_type == "single_force":
+        x_array = MTs_to_process[1,:]
+        y_array = MTs_to_process[0,:]
+        z_array = -1*MTs_to_process[2,:]
+    
+    # Loop over MT samples:
+    for i in range(len(MTs_to_process[0,:])):
+        # Calculate theta and phi for a specific MT:
+        r, theta, phi = convert_cart_coords_to_spherical_coords(x_array[i],y_array[i],z_array[i])
+        theta_bin_val, theta_bin_idx = find_nearest(theta_bin_labels,theta)
+        phi_bin_val, phi_bin_idx = find_nearest(phi_bin_labels,phi)
+        # Bin the data (in terms of theta, phi):
+        theta_phi_bins[theta_bin_idx, phi_bin_idx] += MTp_to_process[i]
+    
+    # Centre data to maximum bin value, for Gaussian fitting (and shift bin labels too):
+    ###theta_phi_bins, theta_bin_labels_new, phi_bin_labels_new = shift_twoD_data_array_to_have_max_in_centre(theta_phi_bins, theta_bin_labels, phi_bin_labels)
+    
+    if use_gau_fit:
+        # # Fit 2D gaussian to theta-phi sphere data:
+        # Note: May not work if scatter of solutions lies over the phi=0,phi=2pi boundary, as fits to 2D plane, not spherical surface.
+        # # And fit gaussian (to normalised data):
+        theta_bin_labels_normallised = theta_bin_labels/np.max(theta_bin_labels)
+        twoD_gauss_fitted_data_theta_phi = fit_twoD_Gaussian(theta_bin_labels_normallised, phi_bin_labels, theta_phi_bins, initial_guess_switch=False)
+    
+        # Get full half width maximum (FWHM) (or could calculatestandard deviation) in theta and phi (from maximum point of gaussian):
+        theta_max_idx = np.where(twoD_gauss_fitted_data_theta_phi==np.max(twoD_gauss_fitted_data_theta_phi))[0][0]
+        theta_gau_max = theta_bin_labels[theta_max_idx]
+        phi_max_idx = np.where(twoD_gauss_fitted_data_theta_phi==np.max(twoD_gauss_fitted_data_theta_phi))[1][0]
+        phi_gau_max = phi_bin_labels[phi_max_idx]
+        val, idx = find_nearest(twoD_gauss_fitted_data_theta_phi[:,phi_max_idx], np.max(twoD_gauss_fitted_data_theta_phi[:,phi_max_idx])/2.)  # Calculate FWHM of gaussian
+        #val, idx = find_nearest(twoD_gauss_fitted_data_theta_phi[:,phi_max_idx], np.std(twoD_gauss_fitted_data_theta_phi[:,phi_max_idx])) # Calculate std of gaussian
+        std_theta = np.absolute(theta_bin_labels[theta_max_idx] - theta_bin_labels[idx])
+        val, idx = find_nearest(twoD_gauss_fitted_data_theta_phi[theta_max_idx,:], np.max(twoD_gauss_fitted_data_theta_phi[theta_max_idx,:])/2.)  # Calculate FWHM of gaussian
+        #val, idx = find_nearest(twoD_gauss_fitted_data_theta_phi[theta_max_idx,:], np.std(twoD_gauss_fitted_data_theta_phi[theta_max_idx,:])) # Calculate std of gaussian
+        std_phi = np.absolute(phi_bin_labels[phi_max_idx] - phi_bin_labels[idx])
+        theta_uncert_bounds = np.array([theta_gau_max-std_theta, theta_gau_max+std_theta])
+        phi_uncert_bounds = np.array([phi_gau_max-std_phi, phi_gau_max+std_phi])
+        
+    else:
+        # Get REAL DATA standard deviation in theta and phi (from maximum point of real data):
+        theta_max_idx = np.where(theta_phi_bins==np.max(theta_phi_bins))[0][0]
+        theta_gau_max = theta_bin_labels[theta_max_idx]
+        phi_max_idx = np.where(theta_phi_bins==np.max(theta_phi_bins))[1][0]
+        phi_gau_max = phi_bin_labels[phi_max_idx]
+        val, idx = find_nearest(theta_phi_bins[:,phi_max_idx], np.std(theta_phi_bins[:,phi_max_idx]))  # Calculate FWHM of gaussian
+        #val, idx = find_nearest(twoD_gauss_fitted_data_theta_phi[:,phi_max_idx], np.std(twoD_gauss_fitted_data_theta_phi[:,phi_max_idx])) # Calculate std of gaussian
+        std_theta = np.absolute(theta_bin_labels[theta_max_idx] - theta_bin_labels[idx])
+        val, idx = find_nearest(theta_phi_bins[theta_max_idx,:], np.std(theta_phi_bins[theta_max_idx,:]))  # Calculate FWHM of gaussian
+        #val, idx = find_nearest(twoD_gauss_fitted_data_theta_phi[theta_max_idx,:], np.std(twoD_gauss_fitted_data_theta_phi[theta_max_idx,:])) # Calculate std of gaussian
+        std_phi = np.absolute(phi_bin_labels[phi_max_idx] - phi_bin_labels[idx])
+        theta_uncert_bounds = [theta_gau_max-std_theta, theta_gau_max+std_theta]
+        phi_uncert_bounds = [phi_gau_max-std_phi, phi_gau_max+std_phi]
+    
+    # And get x,y,z values for uncertainty bounds:
+    r = 1.
+    x_uncert_bounds = r*np.sin(theta_uncert_bounds)*np.cos(phi_uncert_bounds)
+    y_uncert_bounds = r*np.sin(theta_uncert_bounds)*np.sin(phi_uncert_bounds)
+    z_uncert_bounds = r*np.cos(theta_uncert_bounds)
+    
+    return x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, theta_uncert_bounds, phi_uncert_bounds
+    
+def plot_uncertainty_vector_area_for_full_soln(ax, max_likelihood_vector, x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, plot_plane="EN"):
+    """Function for plotting single force vector on beachball style plot. All vectors should be input in NED coordinates."""
+    
+    # normalise:
+    max_likelihood_vector = max_likelihood_vector/np.sqrt(max_likelihood_vector[0]**2 + max_likelihood_vector[1]**2 + max_likelihood_vector[2]**2) #np.max(np.absolute(max_likelihood_vector))
+    
+    # Convert 3D vectors to 2D plane coords:
+    # 1. For most likely vector direction:
+    # Note: Single force vector in is is NED format
+    x = np.array([max_likelihood_vector[0]])
+    y = np.array([max_likelihood_vector[1]])
+    z = np.array([max_likelihood_vector[2]])
+    # Perform rotation of plot plane if required:
+    if plot_plane == "EZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+    elif plot_plane == "NZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
+    X_most_likely, Y_most_likely = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
+    # 2. For lower uncertainty vector direction:
+    # Note: Single force vector in is is NED format
+    x = np.array([x_uncert_bounds[0]])
+    y = np.array([y_uncert_bounds[0]])
+    z = np.array([z_uncert_bounds[0]])
+    # Perform rotation of plot plane if required:
+    if plot_plane == "EZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+    elif plot_plane == "NZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
+    X_lower_uncert, Y_lower_uncert = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
+    # 3. For lower uncertainty vector direction:
+    # Note: Single force vector in is is NED format
+    x = np.array([x_uncert_bounds[1]])
+    y = np.array([y_uncert_bounds[1]])
+    z = np.array([z_uncert_bounds[1]])
+    # Perform rotation of plot plane if required:
+    if plot_plane == "EZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="y") # Rotate axis to get XY -> XZ plane
+    elif plot_plane == "NZ":
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="x") # Rotate axis to get XY -> YZ plane
+        x,y,z = rotate_threeD_coords_about_spec_axis(x, y, z, np.pi/2, axis_for_rotation="z") # Flip N and Z axes (so Z is up)
+    X_upper_uncert, Y_upper_uncert = Lambert_azimuthal_equal_area_projection_conv_XY_plane_for_MTs(x,y,z)
+    
+    # And plot:
+    ax.quiver([0.],[0.],Y_most_likely,X_most_likely,color="#DB3E1F",alpha=0.6, angles='xy', scale_units='xy', scale=1) # Plot maximum vector line
+    ax.plot([0., Y_lower_uncert],[0., X_lower_uncert], color="#DB3E1F", ls="--", alpha=0.6) # Plot minimum uncertainty vector line
+    ax.plot([0., Y_upper_uncert],[0., X_upper_uncert], color="#DB3E1F", ls="--", alpha=0.6) # Plot maximum uncertainty vector line
+    
+    return ax
+
+def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", radiation_MT_phase="P", plot_plane="EN", plot_uncertainty_switch=False, uncertainty_MTs=[], uncertainty_MTp=[]):
     """Function to plot full waveform DC constrained inversion result on sphere, then project into 2D using an equal area projection.
     Input MTs are np array of NED MTs in shape [6,n] where n is number of solutions. Also takes optional radiation_pattern_MT, which it will plot a radiation pattern for.
         Note: x and y coordinates switched for plotting to take from NE to EN
@@ -382,7 +549,15 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
     elif inversion_type == "single_force":
         single_force_vector_to_plot = radiation_pattern_MT
         ax = plot_nodal_planes_for_given_single_force_vector(ax, single_force_vector_to_plot, alpha_single_force_vector=0.8, plot_plane=plot_plane)
-                
+    
+    # Plot measure of uncertainty in orientation (if specified):
+    if plot_uncertainty_switch:
+        if inversion_type=="single_force":
+            max_likelihood_vector = np.array([single_force_vector_to_plot[1], single_force_vector_to_plot[0], -1*single_force_vector_to_plot[2]])
+            x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, theta_uncert_bounds, phi_uncert_bounds = get_uncertainty_estimate_bounds_full_soln(uncertainty_MTs, uncertainty_MTp, inversion_type, n_data_frac=0.1, use_gau_fit=False)
+            ax = plot_uncertainty_vector_area_for_full_soln(ax, max_likelihood_vector, x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, plot_plane=plot_plane)
+            # HERE!!!
+    
     # Plot stations (if provided):
     if not len(stations) == 0:
         # Loop over stations:
@@ -916,7 +1091,7 @@ def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=
     # return MTs_max_gau_loc
         
 
-def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True):
+def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False):
     """Function to run main script."""
     
     # Plot for inversion:
@@ -946,7 +1121,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs, MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")
@@ -959,7 +1134,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
     
     elif inversion_type == "single_force":
         full_MT_max_prob = MT_max_prob
@@ -968,7 +1143,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
     
     elif inversion_type == "DC_single_force_couple":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -978,9 +1153,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
@@ -993,9 +1168,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
@@ -1007,7 +1182,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs[0:6,:], MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")    
@@ -1020,9 +1195,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_crack_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"crack_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename, inversion_type=inversion_type)
@@ -1038,18 +1213,19 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
     
     print "Finished"
     
-       
+
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
     
     # Specify event and inversion type:
-    inversion_type = "single_force_crack_no_coupling" # can be: full_mt, DC, single_force, DC_single_force_couple, DC_single_force_no_coupling, DC_crack_couple, or single_force_crack_no_coupling.
+    inversion_type = "single_force" # can be: full_mt, DC, single_force, DC_single_force_couple, DC_single_force_no_coupling, DC_crack_couple, or single_force_crack_no_coupling.
     event_uid = "20180214185538374893" #"20140629184210365600" #"20090121042009165190" #"20171222022435216400" # Event uid (numbers in FW inversion filename)
     datadir = "./python_FW_outputs"
     radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
+    plot_uncertainty_switch = True # If True, plots uncertainty in direction/orientation of focal mechanism solution
     plot_Lune_switch = True # If True, plots Lune
     
-    run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=plot_Lune_switch)
+    run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=plot_Lune_switch, plot_uncertainty_switch=plot_uncertainty_switch)
 
     
     
