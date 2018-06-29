@@ -88,6 +88,137 @@ def get_full_MT_array(mt):
                           [mt[3]/np.sqrt(2.),mt[1],mt[5]/np.sqrt(2.)],
                           [mt[4]/np.sqrt(2.),mt[5]/np.sqrt(2.),mt[2]]]) )
     return full_MT
+    
+def TP_FP(T,P):
+    """Converts T,P vectors to the fault normal and slip
+    Converts the 3x3 Moment Tensor to the fault normal and slip vectors.
+    Args
+        T: numpy matrix of T vectors.
+        P: numpy matrix of P vectors.
+    Returns
+        (numpy.matrix, numpy.matrix): tuple of Normal and slip vectors
+    (Note: Function from MTFIT.MTconvert)
+    """
+    if T.ndim==1:
+        T=np.matrix(T)
+    if P.ndim==1:
+        P=np.matrix(P)
+    if T.shape[0]!=3:
+        T=T.T
+    if P.shape[0]!=3:
+        P=P.T
+    N1=(T+P)/np.sqrt(np.diag(np.matrix(T+P).T*np.matrix(T+P)))
+    N2=(T-P)/np.sqrt(np.diag(np.matrix(T-P).T*np.matrix(T-P)))
+    return N1,N2
+
+def MT33_TNPE(MT33):
+    """Converts 3x3 matrix to T,N,P vectors and the eigenvalues
+    Converts the 3x3 Moment Tensor to the T,N,P vectors and the eigenvalues.
+    Args
+        MT33: 3x3 numpy matrix
+    Returns
+        (numpy.matrix, numpy.matrix, numpy.matrix, numpy.array): tuple of T, N, P vectors and Eigenvalue array
+    (Note: Function from MTFIT.MTconvert)
+    """
+    E,L=np.linalg.eig(MT33)
+    idx = E.argsort()[::-1]
+    E=E[idx]
+    L=L[:,idx]
+    T=L[:,0]
+    P=L[:,2]
+    N=L[:,1]
+    return T,N,P,E
+
+def FP_SDR(normal,slip):   
+    """Converts fault normal and slip to strike dip rake
+    Coordinate system is North East Down.
+    Args
+        normal: numpy matrix - Normal vector
+        slip: numpy matrix - Slip vector
+    Returns
+        (float, float, float): tuple of strike, dip and rake angles in radians
+    (Note: Function from MTFIT.MTconvert)
+    """ 
+    if type(slip)==np.ndarray:
+        slip=slip/np.sqrt(np.sum(slip*slip))
+    else:
+        slip=slip/np.sqrt(np.diag(slip.T*slip))
+    if type(normal)==np.ndarray:
+        normal=normal/np.sqrt(np.sum(normal*normal))
+    else:
+        normal=normal/np.sqrt(np.diag(normal.T*normal))
+    slip[:,np.array(normal[2,:]>0).flatten()]*=-1
+    normal[:,np.array(normal[2,:]>0).flatten()]*=-1
+    normal=np.array(normal)
+    slip=np.array(slip)
+    strike,dip=normal_SD(normal)
+    rake=np.arctan2(-slip[2],slip[0]*normal[1]-slip[1]*normal[0]);
+    strike[dip>np.pi/2]+=np.pi
+    rake[dip>np.pi/2]=2*np.pi-rake[dip>np.pi/2];
+    dip[dip>np.pi/2]=np.pi-dip[dip>np.pi/2]
+    strike=np.mod(strike,2*np.pi);
+    rake[rake>np.pi]-=2*np.pi
+    rake[rake<-np.pi]+=2*np.pi
+    return np.array(strike).flatten(),np.array(dip).flatten(),np.array(rake).flatten()
+
+def MT33_SDR(MT33):
+    """Converts 3x3 matrix to strike dip and rake values (in radians)
+    Converts the 3x3 Moment Tensor to the strike, dip and rake. 
+    Args
+        MT33: 3x3 numpy matrix
+    Returns
+        (float, float, float): tuple of strike, dip, rake angles in radians
+    (Note: Function from MTFIT.MTconvert)
+    """
+    T,N,P,E=MT33_TNPE(MT33)
+    N1,N2=TP_FP(T,P)
+    return FP_SDR(N1,N2)
+
+def rotation_matrix(axis, theta):
+    """
+    Function to get rotation matrix given an axis of rotation and a rotation angle. Based on Euler-Rodrigues formula.
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    (From: https://stackoverflow.com/questions/6802577/rotation-of-3d-vector)
+    """
+    axis = np.asarray(axis)
+    axis = axis/math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta/2.0)
+    b, c, d = -axis*math.sin(theta/2.0)
+    aa, bb, cc, dd = a*a, b*b, c*c, d*d
+    bc, ad, ac, ab, bd, cd = b*c, a*d, a*c, a*b, b*d, c*d
+    return np.array([[aa+bb-cc-dd, 2*(bc+ad), 2*(bd-ac)],
+                     [2*(bc-ad), aa+cc-bb-dd, 2*(cd+ab)],
+                     [2*(bd+ac), 2*(cd-ab), aa+dd-bb-cc]])
+
+def get_slip_vector_from_full_MT(full_MT):
+    """Function to get slip vector from full MT."""
+    # Get sorted eigenvectors:
+    # Find the eigenvalues for the MT solution and sort into descending order:
+    w,v = eigh(full_MT) # Find eigenvalues and associated eigenvectors for the symetric (Hermitian) MT matrix (for eigenvalue w[i], eigenvector is v[:,i])
+    full_MT_eigvals_sorted = np.sort(w)[::-1] # Sort eigenvalues into descending order
+        
+    # Get T-axis (eigenvector corresponding to highest eigenvalue):
+    T_axis_eigen_value = full_MT_eigvals_sorted[0] # Highest eigenvalue value
+    T_axis_eigenvector_idx = np.where(w==T_axis_eigen_value)[0][0]
+    T_axis_vector = v[:,T_axis_eigenvector_idx]
+    
+    # Get null-axis (eigenvector corresponding to intermediate eigenvalue):
+    null_axis_eigen_value = full_MT_eigvals_sorted[1] # Intermediate eigenvalue value
+    null_axis_eigenvector_idx = np.where(w==null_axis_eigen_value)[0][0]
+    null_axis_vector = v[:,null_axis_eigenvector_idx]
+    
+    # Get P-axis (eigenvector corresponding to lowest eigenvalue) (for completeness only):
+    P_axis_eigen_value = full_MT_eigvals_sorted[2] # Lowest eigenvalue value
+    P_axis_eigenvector_idx = np.where(w==P_axis_eigen_value)[0][0]
+    P_axis_vector = v[:,P_axis_eigenvector_idx]
+    
+    # Get slip vector:
+    # Note: Slip vector for DC is T-axis vector rotated by 45 degrees clockwise about null-axis.
+    rot_matrix = rotation_matrix(null_axis_vector, -np.pi/4.) # Get rotation matrix for rotating by pi/4 clockwise about null-axis
+    slip_vector = np.dot(rot_matrix, T_axis_vector) # Perform rotation to get slip vector
+
+    return slip_vector, T_axis_vector, null_axis_vector, P_axis_vector
 
 def convert_spherical_coords_to_cartesian_coords(r,theta,phi):
     """Function to take spherical coords and convert to cartesian coords. (theta between 0 and pi, phi between 0 and 2pi)"""
@@ -117,6 +248,23 @@ def rotate_threeD_coords_about_spec_axis(x, y, z, rot_angle, axis_for_rotation="
         y_rot = (x*np.sin(rot_angle)) + (y*np.cos(rot_angle))
         z_rot = z
     return x_rot, y_rot, z_rot
+    
+# def strike_dip_rake_to_slip_vector(strike, dip, rake):
+#     """Function to convert strike, dip, rake to slip vector.
+#     Returns normalised slip vector, in NED format.
+#     Input angles must be in radians."""
+#     # Define initial vector to rotate:
+#     vec = np.array([0.,1.,0.]) # In ENU format
+#     # Rotate by strike about z-axis:
+#     vec[0],vec[1],vec[2] = rotate_threeD_coords_about_spec_axis(vec[0],vec[1],vec[2], -strike, axis_for_rotation="z")
+#     # Rotate by dip about x-axis:
+#     vec[0],vec[1],vec[2] = rotate_threeD_coords_about_spec_axis(vec[0],vec[1],vec[2], dip, axis_for_rotation="x")
+#     # Rotate by rake anticlockwise about z-axis:
+#     vec[0],vec[1],vec[2] = rotate_threeD_coords_about_spec_axis(vec[0],vec[1],vec[2], rake, axis_for_rotation="y")
+#     # Convert vec to NED foramt:
+#     vec_NED = np.array([vec[1],vec[0],-1.*vec[2]])
+#     return vec_NED
+    
 
 def create_and_plot_bounding_circle_and_path(ax):
     """Function to create and plot bounding circle for plotting MT solution. 
@@ -376,6 +524,19 @@ def get_uncertainty_estimate_bounds_full_soln(MTs, MTp, inversion_type, n_data_f
         x_array = MTs_to_process[1,:]
         y_array = MTs_to_process[0,:]
         z_array = -1*MTs_to_process[2,:]
+    elif inversion_type == "DC":
+        x_array = np.zeros(len(MTs_to_process[0,:]), dtype=float)
+        y_array = np.zeros(len(MTs_to_process[0,:]), dtype=float)
+        z_array = np.zeros(len(MTs_to_process[0,:]), dtype=float)
+        for a in range(len(MTs_to_process[0,:])):
+            # Get slip direction for current DC MT:
+            MT_curr = MTs_to_process[:,a]
+            MT_curr_full_MT = get_full_MT_array(MT_curr)
+            slip_vector, T_axis_vector, null_axis_vector, P_axis_vector = get_slip_vector_from_full_MT(MT_curr_full_MT) # Get slip vector from DC radiation pattern
+            slip_direction = T_axis_vector # Note - should be = slip_vector, but T axis vector actually gives slip direction at the moment. Not sure if this is because of negative eigenvalues in get_slip_vector_from_full_MT() function.
+            x_array[a] = slip_direction[0]
+            y_array[a] = slip_direction[1]
+            z_array[a] = slip_direction[2]
     
     # Loop over MT samples:
     for i in range(len(MTs_to_process[0,:])):
@@ -556,8 +717,17 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             max_likelihood_vector = np.array([single_force_vector_to_plot[1], single_force_vector_to_plot[0], -1*single_force_vector_to_plot[2]])
             x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, theta_uncert_bounds, phi_uncert_bounds = get_uncertainty_estimate_bounds_full_soln(uncertainty_MTs, uncertainty_MTp, inversion_type, n_data_frac=0.1, use_gau_fit=False)
             ax = plot_uncertainty_vector_area_for_full_soln(ax, max_likelihood_vector, x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, plot_plane=plot_plane)
-            # HERE!!!
-    
+        elif inversion_type=="DC":
+            # Get direction of slip for most likely solution:
+            radiation_pattern_full_MT = get_full_MT_array(radiation_pattern_MT)
+            slip_vector, T_axis_vector, null_axis_vector, P_axis_vector = get_slip_vector_from_full_MT(radiation_pattern_full_MT) # Get slip vector from DC radiation pattern
+            max_likelihood_vector = T_axis_vector # Note - should be = slip_vector, but T axis vector actually gives slip direction at the moment. Not sure if this is because of negative eigenvalues in get_slip_vector_from_full_MT() function. (Note: Also same implementation at the moment in get_uncertainty_estimate_bounds_full_soln() for DC inversion type)
+            # Get uncertainty bounds for slip direction:
+            x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, theta_uncert_bounds, phi_uncert_bounds = get_uncertainty_estimate_bounds_full_soln(uncertainty_MTs, uncertainty_MTp, inversion_type, n_data_frac=0.1, use_gau_fit=False)
+            # And plot slip direction and uncertainty bounds:
+            ax = plot_uncertainty_vector_area_for_full_soln(ax, max_likelihood_vector, x_uncert_bounds, y_uncert_bounds, z_uncert_bounds, plot_plane=plot_plane)
+                        
+            
     # Plot stations (if provided):
     if not len(stations) == 0:
         # Loop over stations:
@@ -1212,7 +1382,6 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
     print "Finished processing unconstrained inversion data for:", MT_data_filename
     
     print "Finished"
-    
 
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
