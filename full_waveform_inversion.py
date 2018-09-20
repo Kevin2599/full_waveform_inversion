@@ -494,6 +494,12 @@ def pearson_correlation_comparison(data, synth):
         PCC = 0.
     return PCC
 
+def gaussian_comparison(data, synth):
+    """Function to perform gaussian comparison of data and synthetic. See equations below for how implemented. Noise level taken from -60:-10 samples at end of trace."""
+    data_uncert = np.average(np.absolute(data[-60:-10])) # Get approximate noise level from data
+    gau_prob = np.exp(-1*np.sum(((data-synth)**2)/(2*(data_uncert**2))) # Find gaussian based probability (between zero and 1)
+    return gau_prob
+
 def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comparison_metric, perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True):
     """Function to compare synthetic to real waveforms via specified comparison metrix, and can do normallised if specified and can compare all waveforms together, or separately then equal weight average combine."""
     # Note: Do for all stations combined!
@@ -523,6 +529,9 @@ def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comp
             elif comparison_metric == "CC-shift":
                 # And get cross-correlation value, with shift allowed:
                 similarity_curr_sample = cross_corr_comparison_shift_allowed(real_data_array_normalised.flatten(), synth_waveform_curr_sample_normalised.flatten(), max_samples_shift_limit=5)
+            elif comparison_metric == "gau":
+                # And get gaussian probability estimate:
+                similarity_curr_sample = gaussian_comparison(real_data_array_normalised.flatten(), synth_waveform_curr_sample_normalised.flatten())
         else:
             # Do waveform comparison, via specified method:
             if comparison_metric == "VR":
@@ -537,6 +546,9 @@ def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comp
             elif comparison_metric == "CC-shift":
                 # And get cross-correlation value, with shift allowed:
                 similarity_curr_sample = cross_corr_comparison_shift_allowed(real_data_array.flatten(), synth_waveform_curr_sample.flatten(), max_samples_shift_limit=5)
+            elif comparison_metric == "gau":
+                # And get gaussian probability estimate:
+                similarity_curr_sample = gaussian_comparison(real_data_array.flatten(), synth_waveform_curr_sample.flatten())
 
     # Compare waveforms for individual recievers/components separately then equal weight (if compare_all_waveforms_simultaneously=False):
     else:
@@ -563,6 +575,9 @@ def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comp
                 elif comparison_metric == "CC-shift":
                     # And get cross-correlation value, with shift allowed:
                     similarity_ind_stat_comps[k] = cross_corr_comparison_shift_allowed(real_data_array_normalised[k,:], synth_waveform_curr_sample_normalised[k,:], max_samples_shift_limit=5)
+                elif comparison_metric == "gau":
+                    # And get gaussian probability estimate:
+                    similarity_curr_sample = gaussian_comparison(real_data_array_normalised[k,:], synth_waveform_curr_sample_normalised[k,:])
         else:
             # Do waveform comparison, via specified method:
             similarity_ind_stat_comps = np.zeros(len(real_data_array[:,0]), dtype=float)
@@ -578,7 +593,10 @@ def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comp
                     similarity_ind_stat_comps[k] = pearson_correlation_comparison(real_data_array[k,:], synth_waveform_curr_sample[k,:])  # P(data|model_i) (???) or at least an approximate measure of it! # Flattened arrays as do for all stations
                 elif comparison_metric == "CC-shift":
                     # And get cross-correlation value, with shift allowed:
-                    similarity_ind_stat_comps[k] = cross_corr_comparison_shift_allowed(real_data_array_normalised[k,:], synth_waveform_curr_sample_normalised[k,:], max_samples_shift_limit=5)
+                    similarity_ind_stat_comps[k] = cross_corr_comparison_shift_allowed(real_data_array[k,:], synth_waveform_curr_sample[k,:], max_samples_shift_limit=5)
+                elif comparison_metric == "gau":
+                    # And get gaussian probability estimate:
+                    similarity_curr_sample = gaussian_comparison(real_data_array[k,:], synth_waveform_curr_sample[k,:])
         # And get equal weighted similarity value:
         similarity_curr_sample = np.average(similarity_ind_stat_comps)
     
