@@ -224,8 +224,8 @@ def generate_random_DC_MT():
     x = a_normalised[0]
     y = a_normalised[1]
     z = a_normalised[2]
-    theta = np.arccos(z)
-    phi = np.arccos(x/np.sin(theta))
+    theta = np.arctan2(np.sqrt((x**2)+(y**2)),z) #np.arccos(z)
+    phi = np.arctan2(y,x) #np.arccos(x/np.sin(theta))
     # And rotate DC moment tensor by random 3D angle:
     random_DC_MT = rot_mt_by_theta_phi(DC_MT_to_rot, theta, phi)
     random_DC_six_MT = get_six_MT_from_full_MT_array(random_DC_MT)
@@ -266,8 +266,8 @@ def generate_random_DC_single_force_coupled_tensor():
     x = a_normalised[0]
     y = a_normalised[1]
     z = a_normalised[2]
-    theta = np.arccos(z)
-    phi = np.arccos(x/np.sin(theta))
+    theta = np.arctan2(np.sqrt((x**2)+(y**2)),z) #np.arccos(z)
+    phi = np.arctan2(y,x) #np.arccos(x/np.sin(theta))
     # 3.b. Rotate DC moment tensor by random 3D angle:
     random_DC_MT = rot_mt_by_theta_phi(DC_MT_to_rot, theta, phi)
     random_DC_six_MT = get_six_MT_from_full_MT_array(random_DC_MT)
@@ -352,8 +352,8 @@ def generate_random_DC_crack_coupled_tensor():
     x = a_normalised[0]
     y = a_normalised[1]
     z = a_normalised[2]
-    theta = np.arccos(z)
-    phi = np.arccos(x/np.sin(theta))
+    theta = np.arctan2(np.sqrt((x**2)+(y**2)),z) #np.arccos(z)
+    phi = np.arctan2(y,x) #np.arccos(x/np.sin(theta))
     DC_crack_MT_rotated = rot_mt_by_theta_phi(DC_crack_MT_to_rot, theta, phi)
     # 4. Normalise and get 6 MT:
     # Get 6 MT:
