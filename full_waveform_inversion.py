@@ -497,7 +497,7 @@ def pearson_correlation_comparison(data, synth):
 def gaussian_comparison(data, synth):
     """Function to perform gaussian comparison of data and synthetic. See equations below for how implemented. Noise level taken from -60:-10 samples at end of trace."""
     data_uncert = np.average(np.absolute(data[-60:-10])) # Get approximate noise level from data
-    gau_prob = np.exp(-1*np.sum(((data-synth)**2)/(2*(data_uncert**2))) # Find gaussian based probability (between zero and 1)
+    gau_prob = np.exp(-1*np.sum(((data-synth)**2)/(2*(data_uncert**2)))) # Find gaussian based probability (between zero and 1)
     return gau_prob
 
 def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comparison_metric, perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True):
