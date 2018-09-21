@@ -836,10 +836,27 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
 
     # And get forward model synthetic waveform result:
     synth_forward_model_result_array = forward_model(green_func_array, M)
-
+    
     # And plot the results:
     if plot_switch:
         plot_specific_forward_model_result(real_data_array, synth_forward_model_result_array, data_labels, plot_title="Initial theoretical inversion solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
+    
+    # And save least squares output:
+    # Set output arrays to equal least squares output:    
+    MTs = M
+    similarity_curr_sample = compare_synth_to_real_waveforms(real_data_array, synth_forward_model_result_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously)      
+    MTp = np.array([similarity_curr_sample])
+    # And save data to MTFIT style file:
+    outdir_least_squares = outdir+"/least_squares_result"
+    os.system("mkdir -p "+outdir_least_squares)
+    save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir_least_squares) # Saves pickled dictionary containing data from inversion
+    # And save most likely solution and real data waveforms to file:
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
+        synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+    else:
+        synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
+    save_specific_waveforms_to_file(real_data_array, synth_forward_model_most_likely_result_array, data_labels, nlloc_hyp_filename, inversion_type, outdir_least_squares)
+    
     
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
     MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors)
