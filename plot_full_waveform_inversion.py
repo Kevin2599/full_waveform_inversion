@@ -214,9 +214,9 @@ def get_slip_vector_from_full_MT(full_MT):
     P_axis_vector = v[:,P_axis_eigenvector_idx]
     
     # Get slip vector:
-    # Note: Slip vector for DC is T-axis vector rotated by 45 degrees clockwise about null-axis.
-    rot_matrix = rotation_matrix(null_axis_vector, -np.pi/4.) # Get rotation matrix for rotating by pi/4 clockwise about null-axis
-    slip_vector = np.dot(rot_matrix, T_axis_vector) # Perform rotation to get slip vector
+    # (For fault plane 1)
+    slip_vector = (1./np.sqrt(2))*(T_axis_vector - P_axis_vector)
+    normal_axis_vector = (1./np.sqrt(2))*(T_axis_vector + P_axis_vector)
 
     return slip_vector, T_axis_vector, null_axis_vector, P_axis_vector
 
