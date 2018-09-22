@@ -645,7 +645,7 @@ def plot_uncertainty_vector_area_for_full_soln(ax, max_likelihood_vector, x_unce
     
     return ax
 
-def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", radiation_MT_phase="P", plot_plane="EN", plot_uncertainty_switch=False, uncertainty_MTs=[], uncertainty_MTp=[]):
+def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=[], MTp_max_prob_value=-1, stations=[], lower_upper_hemi_switch="lower", figure_filename=[], num_MT_solutions_to_plot=20, inversion_type="unconstrained", radiation_MT_phase="P", plot_plane="EN", plot_uncertainty_switch=False, uncertainty_MTs=[], uncertainty_MTp=[]):
     """Function to plot full waveform DC constrained inversion result on sphere, then project into 2D using an equal area projection.
     Input MTs are np array of NED MTs in shape [6,n] where n is number of solutions. Also takes optional radiation_pattern_MT, which it will plot a radiation pattern for.
         Note: x and y coordinates switched for plotting to take from NE to EN
@@ -672,6 +672,10 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
         plt.text(-2.0,2.5,"N",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # x label
         plt.text(-2.5,3.0,"Z",color="k", fontsize=10, horizontalalignment="center", verticalalignment='center',alpha=1.0, zorder=100) # y label
     plt.axis('off')
+    
+    # Add similarity value to plot, if supplied:
+    if MTp_max_prob_value>=0.0:
+        plt.title("Similarity: "+np.str(MTp_max_prob_value))
     
     # Setup bounding circle and create bounding path from circle:
     ax, bounding_circle_path = create_and_plot_bounding_circle_and_path(ax)
@@ -1280,6 +1284,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
     
     # Get most likely solution and plot:
     index_MT_max_prob = np.argmax(MTp) # Index of most likely MT solution
+    MTp_max_prob_value = np.max(MTp) # Similarity value for most likely MT solution
     MT_max_prob = MTs[:,index_MT_max_prob]
     
     if inversion_type == "full_mt":
@@ -1291,7 +1296,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs, MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")
