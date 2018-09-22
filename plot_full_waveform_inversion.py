@@ -1309,7 +1309,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
     
     elif inversion_type == "single_force":
         full_MT_max_prob = MT_max_prob
@@ -1318,7 +1318,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         radiation_pattern_MT = MT_max_prob # 6 moment tensor to plot radiation pattern for
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
     
     elif inversion_type == "DC_single_force_couple":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -1328,9 +1328,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
@@ -1343,9 +1343,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_DC_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="DC", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
@@ -1357,7 +1357,7 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs[0:6,:], MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")    
@@ -1370,9 +1370,9 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # Plot MT solutions and radiation pattern of most likely on sphere:
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_crack_component.png"
-            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_SF_component.png"
-            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+            plot_full_waveform_result_beachball(single_force_vector_max_prob, wfs_dict, radiation_pattern_MT=single_force_vector_max_prob, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="single_force", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"crack_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename, inversion_type=inversion_type)
