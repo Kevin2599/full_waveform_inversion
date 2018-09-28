@@ -61,11 +61,12 @@ manual_indices_time_shift_SF = [22, 22, 21, 22, 24, 23, 23, 22, 22, 21, 22, 24, 
 nlloc_hyp_filename = "NLLoc_data/loc.20180214.185538.grid0.loc.hyp" ##"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" #"NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" #"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 plot_switch = True # If True, will plot outputs to screen
 num_processors = 1 #1 # Number of processors to run for (default is 1)
+set_pre_time_shift_values_to_zero_switch = True # If true, sets values before time shift to zero, to account for rolling the data on itself (default is True)
 only_save_non_zero_solns_switch = False # If True, will only save results with a non-zero probability.
 
 
 # ------------------- Define various functions used in script -------------------
-def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices_time_shift=[]):
+def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices_time_shift=[], set_pre_time_shift_values_to_zero_switch=True):
     """Function to load input data and output as arrays of real data and greens functions.
     Inputs: arrays containing filenames of files with real data (columns for P (L component) only at the moment) and greens functions data (For M_xx, M_yy, M_zz, M_xy, M_xz, M_yz), respectively. Optional input is manual_indices_time_shift (an array/list of manual integer index time shifts for each station).
     Outputs: Real data array of shape (t, n) where t is number of time data points and n is number of stations; greens functions array of shape (t, g_n) where g_n is the number of greens functions components."""
@@ -88,25 +89,26 @@ def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices
         green_func_array = np.zeros(np.shape(green_func_array_raw), dtype=float)
         for i in range(len(manual_indices_time_shift)):
             green_func_array[i,:,:] = np.roll(green_func_array_raw[i,:,:], manual_indices_time_shift[i], axis=1) # Roll along time axis
-            green_func_array[i,:,0:manual_indices_time_shift[i]] = 0. # and set values before orignal pre-roll start to zero
+            if set_pre_time_shift_values_to_zero_switch == True:
+                green_func_array[i,:,0:manual_indices_time_shift[i]] = 0. # and set values before orignal pre-roll start to zero
     else:
         green_func_array = green_func_array_raw
     
     return real_data_array, green_func_array
 
-def get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=[], manual_indices_time_shift_SF=[]):
+def get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=[], manual_indices_time_shift_SF=[], , set_pre_time_shift_values_to_zero_switch=True):
     """Function to load input data, depending upon inversion type. Primarily function to control use of load_input_data() function.
     Note: Has multiple manual_indices_time_shift... inputs, as can specify different offsets for MT greens functions and single force greens functions if desired."""
     # Load input data into arrays:
     if inversion_type=="full_mt" or inversion_type=="DC" or inversion_type=="DC_crack_couple":
-        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT)
+        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
         # correct for different units of single force to DC (see note in script header):
         green_func_array = green_func_array*(10**3)
     elif inversion_type=="single_force":
-        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF)
+        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
     elif inversion_type=="DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "single_force_crack_no_coupling":
-        real_data_array, MT_green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT)
-        real_data_array, SF_green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF)
+        real_data_array, MT_green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
+        real_data_array, SF_green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
         # correct for different units of single force to DC (see note in script header):
         MT_green_func_array = MT_green_func_array*(10**3)
         # And combine all greens functions:
@@ -825,10 +827,10 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
     
     
-def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch=False, num_processors=1, only_save_non_zero_solns_switch=False):
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False):
     """Function to run the inversion script."""
     # Load input data (completely, for specific inversion type):
-    real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF)
+    real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
 
     # Perform the inversion:
     M = perform_inversion(real_data_array, green_func_array)
@@ -896,7 +898,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
     # Run functions via main run function:
-    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch, num_processors, only_save_non_zero_solns_switch)
+    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch, num_processors, set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch)
 
 
 
