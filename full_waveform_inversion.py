@@ -58,6 +58,8 @@ synth_data_fnames = []
 #manual_indices_time_shift = [22, 22, 21, 22, 24, 23, 23, 22, 22, 21, 22, 24, 23, 24, 23, 23, 20, 22, 27, 27, 24] ##[22, 26, 26, 27, 22, 24, 28, 26, 24] ##[11, 7, 3, 3, 5, 9] #[11, 7, 3, 3, 5, 17, 16, 9, 19, 19] #[23, 21, 21]#, 22, 23, 21, 24, 24, 19] #[13, 9, 6, 5, 8, 20, 19, 12, 22, 22] #55 #[2,1,0,2,1,0,2,1,0] # Values by which to shift greens functions (must be integers here)
 manual_indices_time_shift_MT = [23, 22, 21, 23, 25, 23, 23, 22, 22, 21, 23, 25, 23, 24, 24, 24, 21, 23, 28, 28, 25] # Values by which to shift greens functions (must be integers here)
 manual_indices_time_shift_SF = [22, 22, 21, 22, 24, 23, 23, 22, 22, 21, 22, 24, 23, 24, 23, 23, 20, 22, 27, 27, 24] # Values by which to shift greens functions (must be integers here)
+cut_phase_start_vals = [] # Indices by which to begin cut phase (must be integers, and specified for every trace, if specified). (Default is not to cut the P and S phases) (must specify cut_phase_end_vals too)
+cut_phase_length = 100 # Length to cut phases by. Integer. Currently this number must be constant, as code cannot deal with different data lengths.
 nlloc_hyp_filename = "NLLoc_data/loc.20180214.185538.grid0.loc.hyp" ##"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" #"NLLoc_data/loc.run1.20171222.022435.grid0.loc.hyp" #"NLLoc_data/loc.Tom__RunNLLoc000.20090121.042009.grid0.loc.hyp" # Nonlinloc filename for saving event data to file in MTFIT format (for plotting, further analysis etc)
 plot_switch = True # If True, will plot outputs to screen
 num_processors = 1 #1 # Number of processors to run for (default is 1)
@@ -66,7 +68,7 @@ only_save_non_zero_solns_switch = False # If True, will only save results with a
 
 
 # ------------------- Define various functions used in script -------------------
-def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices_time_shift=[], set_pre_time_shift_values_to_zero_switch=True):
+def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices_time_shift=[], cut_phase_start_vals=[], cut_phase_length=0, set_pre_time_shift_values_to_zero_switch=True):
     """Function to load input data and output as arrays of real data and greens functions.
     Inputs: arrays containing filenames of files with real data (columns for P (L component) only at the moment) and greens functions data (For M_xx, M_yy, M_zz, M_xy, M_xz, M_yz), respectively. Optional input is manual_indices_time_shift (an array/list of manual integer index time shifts for each station).
     Outputs: Real data array of shape (t, n) where t is number of time data points and n is number of stations; greens functions array of shape (t, g_n) where g_n is the number of greens functions components."""
@@ -94,21 +96,31 @@ def load_input_data(datadir, real_data_fnames, green_func_fnames, manual_indices
     else:
         green_func_array = green_func_array_raw
     
+    # Cut out phases rather than using whole length of data, if specified:
+    real_data_array_cut_phases = np.zeros((len(real_data_array[:,0]), cut_phase_length), dtype=float)
+    green_func_array_cut_phases = np.zeros((len(green_func_array[:,0]), num_green_func_comp, cut_phase_length), dtype=float)
+    if len(cut_phase_start_vals)>0:
+        for i in range(len(real_data_fnames)):
+            real_data_array_cut_phases[i, :] = real_data_array[i, int(cut_phase_start_vals[i]):int(cut_phase_start_vals[i]+cut_phase_length)]
+            green_func_array_cut_phases[i, :, :] = green_func_array[i, :, int(cut_phase_start_vals[i]):int(cut_phase_start_vals[i]+cut_phase_length)]
+    real_data_array = real_data_array_cut_phases
+    green_func_array = green_func_array_cut_phases
+    
     return real_data_array, green_func_array
 
-def get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=[], manual_indices_time_shift_SF=[], , set_pre_time_shift_values_to_zero_switch=True):
+def get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=[], manual_indices_time_shift_SF=[], cut_phase_start_vals=[], cut_phase_length=0, set_pre_time_shift_values_to_zero_switch=True):
     """Function to load input data, depending upon inversion type. Primarily function to control use of load_input_data() function.
     Note: Has multiple manual_indices_time_shift... inputs, as can specify different offsets for MT greens functions and single force greens functions if desired."""
     # Load input data into arrays:
     if inversion_type=="full_mt" or inversion_type=="DC" or inversion_type=="DC_crack_couple":
-        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
+        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
         # correct for different units of single force to DC (see note in script header):
         green_func_array = green_func_array*(10**3)
     elif inversion_type=="single_force":
-        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
+        real_data_array, green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
     elif inversion_type=="DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "single_force_crack_no_coupling":
-        real_data_array, MT_green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
-        real_data_array, SF_green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
+        real_data_array, MT_green_func_array = load_input_data(datadir, real_data_fnames, MT_green_func_fnames, manual_indices_time_shift_MT, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
+        real_data_array, SF_green_func_array = load_input_data(datadir, real_data_fnames, single_force_green_func_fnames, manual_indices_time_shift_SF, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
         # correct for different units of single force to DC (see note in script header):
         MT_green_func_array = MT_green_func_array*(10**3)
         # And combine all greens functions:
@@ -827,10 +839,10 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
     
     
-def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False):
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False):
     """Function to run the inversion script."""
     # Load input data (completely, for specific inversion type):
-    real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
+    real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch)
 
     # Perform the inversion:
     M = perform_inversion(real_data_array, green_func_array)
@@ -898,7 +910,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
     # Run functions via main run function:
-    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, plot_switch, num_processors, set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch)
+    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals, cut_phase_length, plot_switch, num_processors, set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch)
 
 
 
