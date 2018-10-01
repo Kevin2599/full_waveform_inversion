@@ -674,8 +674,9 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
     plt.axis('off')
     
     # Add similarity value to plot, if supplied:
-    if MTp_max_prob_value>=0.0:
-        plt.title("Similarity: "+np.str(MTp_max_prob_value))
+    if plot_uncertainty_switch:
+        if MTp_max_prob_value>=0.0:
+            plt.title("Similarity: "+np.str(MTp_max_prob_value))
     
     # Setup bounding circle and create bounding path from circle:
     ax, bounding_circle_path = create_and_plot_bounding_circle_and_path(ax)
