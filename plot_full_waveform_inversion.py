@@ -814,6 +814,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+            # Or if have LQT components:
             elif wfs_component_labels_current_station_sorted == ['L','Q','T']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
@@ -826,6 +827,39 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 idx_tmp = wfs_component_labels_current_station.index("T")
                 real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+                wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+            # Or if have split P and S components:
+            elif wfs_component_labels_current_station_sorted == ['R-P', 'R-S', 'T-P', 'T-S', 'Z-P', 'Z-S']:
+                real_wfs_current_station_unsorted = list(real_wfs_current_station)
+                synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+                idx_tmp = wfs_component_labels_current_station.index("R-P")
+                real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("R-S")
+                real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("T-P")
+                real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("T-S")
+                real_wfs_current_station[3] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[3] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("Z-P")
+                real_wfs_current_station[4] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[4] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("Z-S")
+                real_wfs_current_station[5] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[5] = synth_wfs_current_station_unsorted[idx_tmp]
+                wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+            elif wfs_component_labels_current_station_sorted == ['Z-P', 'Z-S']:
+                real_wfs_current_station_unsorted = list(real_wfs_current_station)
+                synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+                idx_tmp = wfs_component_labels_current_station.index("R-P")
+                real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+                idx_tmp = wfs_component_labels_current_station.index("R-S")
+                real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+                synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
             # for wfs_dict_station_idx in range(len(wfs_dict.keys())):
             #     if wfs_dict.keys()[wfs_dict_station_idx].split(",")[0] == station_name:
