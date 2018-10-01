@@ -814,7 +814,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
-            # Or if have LQT components:
+                radius_factor_wfs_plotting = 3.0
             elif wfs_component_labels_current_station_sorted == ['L','Q','T']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
@@ -828,7 +828,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
-            # Or if have split P and S components:
+                radius_factor_wfs_plotting = 3.0
             elif wfs_component_labels_current_station_sorted == ['R-P', 'R-S', 'T-P', 'T-S', 'Z-P', 'Z-S']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
@@ -851,6 +851,7 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 real_wfs_current_station[5] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[5] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+                radius_factor_wfs_plotting = 4.0
             elif wfs_component_labels_current_station_sorted == ['Z-P', 'Z-S']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
@@ -861,6 +862,9 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+                radius_factor_wfs_plotting = 3.0
+            else:
+                radius_factor_wfs_plotting = 2.0
             # for wfs_dict_station_idx in range(len(wfs_dict.keys())):
             #     if wfs_dict.keys()[wfs_dict_station_idx].split(",")[0] == station_name:
             #         real_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['real_wf']
@@ -868,19 +872,19 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             # Get coords to plot waveform at:
             if plot_plane == "EN":
                 theta = np.pi/2. # Set theta to pi/2 as want to just plot waveforms in horizontal plane (if plot_plane == "EN")
-                r = 2.0 # as want to plot waveforms beyond extent of focal sphere
+                r = radius_factor_wfs_plotting #2.0 # as want to plot waveforms beyond extent of focal sphere
             elif plot_plane == "EZ":
                 if theta == np.pi/2. and (phi==np.pi or phi==2.*np.pi):
                     phi = np.pi
-                    r = 2.
+                    r = radius_factor_wfs_plotting #2.
                 else:
                     r = np.sqrt(25./((np.cos(theta)**2) + (np.sin(phi)**2))) # as want to plot waveforms beyond extent of focal sphere
             elif plot_plane == "NZ":
                 if theta == np.pi/2. and (phi==np.pi/2. or phi==3.*np.pi/2.):
                     phi = np.pi
-                    r = 2.
+                    r = radius_factor_wfs_plotting #2.
                 else:
-                    r = np.sqrt(25./((np.cos(theta)**2) + (np.cos(phi)**2))) # as want to plot waveforms beyond extent of focal sphere
+                    r = radius_factor_wfs_plotting*np.sqrt(25./((np.cos(theta)**2) + (np.cos(phi)**2))) # as want to plot waveforms beyond extent of focal sphere
             x,y,z = convert_spherical_coords_to_cartesian_coords(r, theta, phi)
             # Perform rotation of plot plane if required:
             if plot_plane == "EZ":
