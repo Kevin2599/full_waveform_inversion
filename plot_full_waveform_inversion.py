@@ -855,10 +855,10 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
             elif wfs_component_labels_current_station_sorted == ['Z-P', 'Z-S']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
-                idx_tmp = wfs_component_labels_current_station.index("R-P")
+                idx_tmp = wfs_component_labels_current_station.index("Z-P")
                 real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
-                idx_tmp = wfs_component_labels_current_station.index("R-S")
+                idx_tmp = wfs_component_labels_current_station.index("Z-S")
                 real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
