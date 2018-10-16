@@ -35,6 +35,7 @@ import matplotlib.patches as mpatches # For adding patches for creating legends 
 from matplotlib.collections import PatchCollection # For plotting MT radiation patterns
 import glob
 import pickle
+import matplotlib.gridspec as gridspec
 #from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 #import MTconvert # For doing various MT conversions/rotations etc (functions are originally part of MTINV package)
 
@@ -852,8 +853,8 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 real_wfs_current_station[5] = real_wfs_current_station_unsorted[idx_tmp]
                 synth_wfs_current_station[5] = synth_wfs_current_station_unsorted[idx_tmp]
                 wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
-                radius_factor_wfs_plotting = 4.0
-            elif wfs_component_labels_current_station_sorted == ['Z-P', 'Z-S']:
+                radius_factor_wfs_plotting = 3.0
+            elif wfs_component_labels_current_station_sorted == ['Z-P', 'R-P']:
                 real_wfs_current_station_unsorted = list(real_wfs_current_station)
                 synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
                 idx_tmp = wfs_component_labels_current_station.index("Z-P")
@@ -866,6 +867,8 @@ def plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern
                 radius_factor_wfs_plotting = 3.0
             else:
                 radius_factor_wfs_plotting = 2.0
+                if len(stations)>5:
+                    radius_factor_wfs_plotting = 2.0 + 2.*random.random()
             # for wfs_dict_station_idx in range(len(wfs_dict.keys())):
             #     if wfs_dict.keys()[wfs_dict_station_idx].split(",")[0] == station_name:
             #         real_wf_current_stat = wfs_dict[wfs_dict.keys()[wfs_dict_station_idx]]['real_wf']
@@ -1302,9 +1305,112 @@ def plot_Lune(MTs, MTp, six_MT_max_prob=[], frac_to_sample=0.1, figure_filename=
     # MTs_max_gau_loc = gamma_delta_binned_MT_store["delta="+str(delta)]["gamma="+str(gamma)]["MTs"] # MT solutions associated with gaussian maximum (note: may be different to maximum value due to max value being fit rather than real value)
     #
     # return MTs_max_gau_loc
+
+def sort_wfs_components_current_station(wfs_component_labels_current_station, real_wfs_current_station, synth_wfs_current_station):
+    """Function to sort current waveform components."""
+    wfs_component_labels_current_station_sorted = list(wfs_component_labels_current_station)
+    wfs_component_labels_current_station_sorted.sort()
+    if wfs_component_labels_current_station_sorted == ['R','T','Z']:
+        real_wfs_current_station_unsorted = list(real_wfs_current_station)
+        synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+        idx_tmp = wfs_component_labels_current_station.index("R")
+        real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("T")
+        real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("Z")
+        real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+        wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+    elif wfs_component_labels_current_station_sorted == ['L','Q','T']:
+        real_wfs_current_station_unsorted = list(real_wfs_current_station)
+        synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+        idx_tmp = wfs_component_labels_current_station.index("L")
+        real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("Q")
+        real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("T")
+        real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+        wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+    elif wfs_component_labels_current_station_sorted == ['R-P', 'R-S', 'T-P', 'T-S', 'Z-P', 'Z-S']:
+        real_wfs_current_station_unsorted = list(real_wfs_current_station)
+        synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+        idx_tmp = wfs_component_labels_current_station.index("R-P")
+        real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("R-S")
+        real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("T-P")
+        real_wfs_current_station[2] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[2] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("T-S")
+        real_wfs_current_station[3] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[3] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("Z-P")
+        real_wfs_current_station[4] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[4] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("Z-S")
+        real_wfs_current_station[5] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[5] = synth_wfs_current_station_unsorted[idx_tmp]
+        wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+    elif wfs_component_labels_current_station_sorted == ['Z-P', 'R-P']:
+        real_wfs_current_station_unsorted = list(real_wfs_current_station)
+        synth_wfs_current_station_unsorted = list(synth_wfs_current_station)
+        idx_tmp = wfs_component_labels_current_station.index("Z-P")
+        real_wfs_current_station[0] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[0] = synth_wfs_current_station_unsorted[idx_tmp]
+        idx_tmp = wfs_component_labels_current_station.index("Z-S")
+        real_wfs_current_station[1] = real_wfs_current_station_unsorted[idx_tmp]
+        synth_wfs_current_station[1] = synth_wfs_current_station_unsorted[idx_tmp]
+        wfs_component_labels_current_station = wfs_component_labels_current_station_sorted
+    return wfs_component_labels_current_station_sorted, real_wfs_current_station, synth_wfs_current_station
+
+def plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname):
+    """Function to plot waveforms for the most likely inversion solution and save as separate plot."""
+    
+    # Setup figure:
+    fig = plt.figure(figsize=(8, 3*len(stations)))
+    outer_plot_obj = gridspec.GridSpec(len(stations), 1, wspace=0.2, hspace=0.2)
+    
+    # Loop over each station, plotting waveforms:
+    i=0
+    for station in stations:
+        station_name = station[0][0]
+        # Get current real and synthetic waveforms:
+        # Note: Will get all components for current station
+        real_wfs_current_station = []
+        synth_wfs_current_station = []
+        wfs_component_labels_current_station = []
+        for wfs_key in wfs_dict.keys():
+            if station_name in wfs_key:
+                real_wfs_current_station.append(wfs_dict[wfs_key]['real_wf']) # Append current real waveforms to wfs for current station
+                synth_wfs_current_station.append(wfs_dict[wfs_key]['synth_wf']) # Append current synth waveforms to wfs for current station
+                wfs_component_labels_current_station.append(wfs_key.split(", ")[1]) # Get current component label
+        # and reorder if have Z,R and T components:
+        wfs_component_labels_current_station_sorted, real_wfs_current_station, synth_wfs_current_station = sort_wfs_components_current_station(wfs_component_labels_current_station, real_wfs_current_station, synth_wfs_current_station)
+        # And plot:
+        # Setup inner plot for current station:
+        inner_plot_obj = gridspec.GridSpecFromSubplotSpec(len(real_wfs_current_station), 1, subplot_spec=outer_plot_obj[i], wspace=0.1, hspace=0.1)
+        for j in range(len(real_wfs_current_station)):
+            ax_curr = plt.Subplot(fig, inner_plot_obj[j])
+            if j==0:
+                ax_curr.set_title(station_name)
+            ax_curr.plot(real_wfs_current_station[j],c='k', alpha=0.6, linewidth=0.75) # Plot real data
+            ax_curr.plot(synth_wfs_current_station[j],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.5) # Plot synth data
+            ax_curr.set_ylabel(wfs_component_labels_current_station_sorted[j])
+            fig.add_subplot(ax_curr)
+        i+=1
+    
+    # And save figure:
+    plt.savefig(plot_fname, dpi=300)
         
 
-def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False):
+def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False, plot_wfs_separately_switch=False):
     """Function to run main script."""
     
     # Plot for inversion:
@@ -1336,10 +1442,14 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
             plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs, MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")
-    
+        
     elif inversion_type == "DC":
         # And get full MT matrix:
         full_MT_max_prob = get_full_MT_array(MT_max_prob)
@@ -1349,6 +1459,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
             plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
     
     elif inversion_type == "single_force":
         full_MT_max_prob = MT_max_prob
@@ -1358,6 +1472,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
             plot_full_waveform_result_beachball(MTs_to_plot, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type=inversion_type, radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
     
     elif inversion_type == "DC_single_force_couple":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -1373,6 +1491,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
     
     elif inversion_type == "DC_single_force_no_coupling":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -1388,6 +1510,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"DC_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
     
     elif inversion_type == "DC_crack_couple":
         full_MT_max_prob = get_full_MT_array(MT_max_prob[0:6])
@@ -1397,6 +1523,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         for plot_plane in ["EN","EZ","NZ"]:
             figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+".png"
             plot_full_waveform_result_beachball(full_MT_max_prob, wfs_dict, radiation_pattern_MT=radiation_pattern_MT, MTp_max_prob_value=MTp_max_prob_value, stations=stations, lower_upper_hemi_switch="upper", figure_filename=figure_filename, num_MT_solutions_to_plot=1, inversion_type="unconstrained", radiation_MT_phase=radiation_MT_phase, plot_plane=plot_plane, plot_uncertainty_switch=plot_uncertainty_switch, uncertainty_MTs=MTs, uncertainty_MTp=MTp)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs[0:6,:], MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_Lune.png")    
@@ -1415,6 +1545,10 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
         # And plot probability distribution for DC vs. single force:
         figure_filename = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+"crack_vs_SF_prob_dist.png"
         plot_prob_distribution_DC_vs_single_force(MTs, MTp, figure_filename=figure_filename, inversion_type=inversion_type)
+        # And plot waveforms separately (if specified):
+        if plot_wfs_separately_switch:
+            plot_fname = "Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_separate_wfs"+".png"
+            plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname)
         # And plot Lune for solution:
         if plot_Lune_switch:
             plot_Lune(MTs[0:6,:], MTp, six_MT_max_prob=radiation_pattern_MT, frac_to_sample=0.1, figure_filename="Plots/"+MT_data_filename.split("/")[-1].split(".")[0]+"_"+plot_plane+"_Lune.png")
