@@ -54,6 +54,7 @@ def load_MT_dict_from_file(matlab_data_filename):
                     MTp=data['Events'][0][0][i][0] # stored as a n length vector, the probability
                 if data['Events'][0].dtype.descr[i][0] == 'MTSpace':
                     MTs=data['Events'][0][0][i] # stored as a 6 by n array (6 as 6 moment tensor components)
+                MTp_absolute = []
                 i+=1
             except IndexError:
                 break
@@ -69,11 +70,16 @@ def load_MT_dict_from_file(matlab_data_filename):
         MTp = FW_dict["MTp"]
         MTs = FW_dict["MTs"]
         stations = np.array(FW_dict["stations"])
+        # And try to get absolute similarity/probability values:
+        try:
+            MTp_absolute = FW_dict["MTp_absolute"]
+        except KeyError:
+            MTp_absolute = []
         
     else:
         print "Cannot recognise input filename."
         
-    return uid, MTp, MTs, stations
+    return uid, MTp, MTp_absolute, MTs, stations
     
 def find_nearest(array,value):
     idx = (np.abs(array-value)).argmin()
@@ -1410,7 +1416,7 @@ def plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname):
     plt.savefig(plot_fname, dpi=300)
         
 
-def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False, plot_wfs_separately_switch=False, plot_multi_medium_greens_func_inv_switch=False):
+def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False, plot_wfs_separately_switch=False, plot_multi_medium_greens_func_inv_switch=False, plot_absolute_probability_switch=True):
     """Function to run main script."""
     
     # Plot for inversion:
@@ -1423,8 +1429,12 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
     print "Processing data for:", MT_data_filename
 
     # Import MT data and associated waveforms:
-    uid, MTp, MTs, stations = load_MT_dict_from_file(MT_data_filename)
+    uid, MTp, MTp_absolute, MTs, stations = load_MT_dict_from_file(MT_data_filename)
     wfs_dict = load_MT_waveforms_dict_from_file(MT_waveforms_data_filename)
+    # And use absolute probabilities, if specified (and if data is available):
+    if plot_absolute_probability_switch:
+        if len(MTp_absolute)>0:
+            MTp = MTp_absolute
     
     
     # Get most likely solution and plot:

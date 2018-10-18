@@ -65,6 +65,7 @@ plot_switch = True # If True, will plot outputs to screen
 num_processors = 1 #1 # Number of processors to run for (default is 1)
 set_pre_time_shift_values_to_zero_switch = True # If true, sets values before time shift to zero, to account for rolling the data on itself (default is True)
 only_save_non_zero_solns_switch = False # If True, will only save results with a non-zero probability.
+return_absolute_similarity_values_switch = True # If True, will also save absolute similarity values, as well as the normallised values. (will be saved to the output dict as )
 invert_for_ratio_of_multiple_media_greens_func_switch = False # If True, allows for invertsing for the ratio of two sets of greens functions, for different media, relative to one another (with the split in greens function fnames sepcified by green_func_fnames_split_index).
 green_func_fnames_split_index = 6 # Index of first greens function fname for second medium
 
@@ -750,7 +751,7 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     return_dict_medium_1_medium_2_rel_amp_ratios[procnum] = tmp_medium_1_medium_2_rel_amp_ratios
     print "Finished processing process:", procnum, "for ", num_samples_per_processor, "samples."
 
-def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=1, invert_for_ratio_of_multiple_media_greens_func_switch=False):
+def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=1, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False):
     """Function to use random Monte Carlo sampling of the moment tensor to derive a best fit for the moment tensor to the data.
     Notes: Currently does this using M_amplitude (as makes comparison of data realistic) (alternative could be to normalise real and synthetic data).
     Inversion type can be: full_mt, DC or single_force. If it is full_mt or DC, must give 6 greens functions in greeen_func_array. If it is a single force, must use single force greens functions (3).
@@ -811,8 +812,14 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
         MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components
     if invert_for_ratio_of_multiple_media_greens_func_switch:
         MTs = np.vstack((MTs, medium_1_medium_2_rel_amp_ratios)) # For passing relative amplitude of medium 1 to medium 2 greens functions
+    
+    # Any final additional data returning processing:
+    if return_absolute_similarity_values_switch:
+        MTp_absolute = similarity_values_all_samples
+    else:
+        MTp_absolute = []
         
-    return MTs, MTp
+    return MTs, MTp, MTp_absolute
     
 def get_event_uid_and_station_data_MTFIT_FORMAT_from_nonlinloc_hyp_file(nlloc_hyp_filename):
     """Function to get event uid and station data (station name, azimuth, takeoff angle, polarity) from nonlinloc hyp file. This data is required for writing to file for plotting like MTFIT data."""
@@ -897,7 +904,7 @@ def remove_zero_prob_results(MTp, MTs):
     MTp_out = MTp[non_zero_indices][:,0]
     return MTp_out, MTs_out
     
-def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir):
+def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir, MTp_absolute=[]):
     """Function to save data to MTFIT style file, containing arrays of uid, MTs (array of 6xn for possible MT solutions), MTp (array of length n storing probabilities of each solution) and stations (station name, azimuth, takeoff angle, polarity (set to zero here)).
     Output is a pickled file containing a dictionary of uid, stations, MTs and MTp."""
     # Get uid and stations data:
@@ -908,6 +915,8 @@ def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdi
     out_dict["MTp"] = MTp
     out_dict["uid"] = uid
     out_dict["stations"] = stations
+    if len(MTp_absolute)>0:
+        out_dict["MTp_absolute"] = MTp_absolute
     # And save to file:
     out_fname = outdir+"/"+uid+"_FW_"+inversion_type+".pkl"
     print "Saving FW inversion to file:", out_fname
@@ -928,7 +937,7 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     print "Saving FW inversion to file:", out_fname
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
     
-def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0):
+def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0):
     """Function to run the inversion script."""
     
     # Load input data (completely, for specific inversion type):
@@ -967,7 +976,7 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
 
 
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
-    MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch)
+    MTs, MTp, MTp_absolute = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch)
 
     # Check that probability of output is non-zero:
     if math.isnan(MTp[0]):
@@ -998,7 +1007,7 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
         print "Most likely solution:", MTs[:,np.where(MTp==np.max(MTp))[0][0]]
 
     # And save data to MTFIT style file:
-    save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir) # Saves pickled dictionary containing data from inversion
+    save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir, MTp_absolute=MTp_absolute) # Saves pickled dictionary containing data from inversion
     # And save most likely solution and real data waveforms to file:
     if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         if invert_for_ratio_of_multiple_media_greens_func_switch:
@@ -1019,13 +1028,13 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     print "Finished"
         
     
-def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0):
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0):
     """Function to run the inversion script."""
 
     # Run specific multi medium inversion, if specified:
     if invert_for_ratio_of_multiple_media_greens_func_switch:
         # For muliple media greens functions:
-        run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, plot_switch=plot_switch, num_processors=num_processors, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch=only_save_non_zero_solns_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_fnames_split_index=green_func_fnames_split_index)
+        run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, plot_switch=plot_switch, num_processors=num_processors, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch=only_save_non_zero_solns_switch, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_fnames_split_index=green_func_fnames_split_index)
     else:
         # Run for normal, single set of greens functions:
         
@@ -1061,7 +1070,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
     
     
         # And do Monte Carlo random sampling to obtain PDF of moment tensor:
-        MTs, MTp = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors)
+        MTs, MTp, MTp_absolute = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch)
     
         # Check that probability of output is non-zero:
         if math.isnan(MTp[0]):
@@ -1082,7 +1091,7 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
             print "Most likely solution:", MTs[:,np.where(MTp==np.max(MTp))[0][0]]
     
         # And save data to MTFIT style file:
-        save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir) # Saves pickled dictionary containing data from inversion
+        save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir, MTp_absolute=MTp_absolute) # Saves pickled dictionary containing data from inversion
         # And save most likely solution and real data waveforms to file:
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
@@ -1098,18 +1107,5 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
 # ------------------- Main script for running -------------------
 if __name__ == "__main__":
     # Run functions via main run function:
-    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals, cut_phase_length, plot_switch, num_processors, set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch)
-
-
-
-
-
-
-
-
-
-
-
-
-
+    run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals, cut_phase_length, plot_switch, num_processors, set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch, return_absolute_similarity_values_switch)
 
