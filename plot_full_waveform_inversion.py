@@ -1410,7 +1410,7 @@ def plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname):
     plt.savefig(plot_fname, dpi=300)
         
 
-def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False, plot_wfs_separately_switch=False):
+def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=True, plot_uncertainty_switch=False, plot_wfs_separately_switch=False, plot_multi_medium_greens_func_inv_switch=False):
     """Function to run main script."""
     
     # Plot for inversion:
@@ -1431,6 +1431,17 @@ def run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_sw
     index_MT_max_prob = np.argmax(MTp) # Index of most likely MT solution
     MTp_max_prob_value = np.max(MTp) # Similarity value for most likely MT solution
     MT_max_prob = MTs[:,index_MT_max_prob]
+    
+    # If solution is for multiple medium greens function solution, separate MT data from relative amplitude ratio:
+    if plot_multi_medium_greens_func_inv_switch:
+        MT_max_prob_tmp = MT_max_prob[0:6]
+        amp_ratio_direct_vs_indirect = MT_max_prob[-1] # Proportion of amplitude that is from direct vs indirect radiation
+        MT_max_prob = MT_max_prob_tmp
+        print "----------------------"
+        print " "
+        print "Amplitude ratio of direct to indirect radiation:", amp_ratio_direct_vs_indirect
+        print " "
+        print "----------------------"
     
     if inversion_type == "full_mt":
         inversion_type = "unconstrained"
@@ -1571,6 +1582,8 @@ if __name__ == "__main__":
     radiation_MT_phase="P" # Radiation phase to plot (= "P" or "S")
     plot_uncertainty_switch = True # If True, plots uncertainty in direction/orientation of focal mechanism solution
     plot_Lune_switch = True # If True, plots Lune
+    plot_wfs_separately_switch = False # If true, plots waveforms separately
+    plot_multi_medium_greens_func_inv_switch = False # Set as True if plotting multi medium greens function inversion results (default = False)
     
     run(inversion_type, event_uid, datadir, radiation_MT_phase="P", plot_Lune_switch=plot_Lune_switch, plot_uncertainty_switch=plot_uncertainty_switch)
 

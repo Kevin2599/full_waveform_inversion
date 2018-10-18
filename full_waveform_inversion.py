@@ -934,7 +934,6 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     # Load input data (completely, for specific inversion type):
     real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_fnames_split_index=green_func_fnames_split_index)
     
-    # HERE!!!...
     # Define a fraction of the first medium to use for the simple least squares inversion:
     frac_medium_1 = 0.5
     green_func_array_for_lsq_inv = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
@@ -983,12 +982,16 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     if plot_switch:
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             if invert_for_ratio_of_multiple_media_greens_func_switch:
-                synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
+                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
             else:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
         else:
             if invert_for_ratio_of_multiple_media_greens_func_switch:
-                synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
             else:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
         plot_specific_forward_model_result(real_data_array, synth_forward_model_most_likely_result_array, data_labels, plot_title="Most likely Monte Carlo sampled solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
@@ -999,12 +1002,16 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     # And save most likely solution and real data waveforms to file:
     if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         if invert_for_ratio_of_multiple_media_greens_func_switch:
-            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
+            frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+            green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+            synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
         else:
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
     else:
         if invert_for_ratio_of_multiple_media_greens_func_switch:
-            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+            frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+            green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+            synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
         else:
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
     save_specific_waveforms_to_file(real_data_array, synth_forward_model_most_likely_result_array, data_labels, nlloc_hyp_filename, inversion_type, outdir)
@@ -1092,3 +1099,17 @@ def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_gr
 if __name__ == "__main__":
     # Run functions via main run function:
     run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals, cut_phase_length, plot_switch, num_processors, set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
