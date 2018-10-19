@@ -68,6 +68,7 @@ only_save_non_zero_solns_switch = False # If True, will only save results with a
 return_absolute_similarity_values_switch = True # If True, will also save absolute similarity values, as well as the normallised values. (will be saved to the output dict as )
 invert_for_ratio_of_multiple_media_greens_func_switch = False # If True, allows for invertsing for the ratio of two sets of greens functions, for different media, relative to one another (with the split in greens function fnames sepcified by green_func_fnames_split_index).
 green_func_fnames_split_index = 6 # Index of first greens function fname for second medium
+green_func_phase_labels = ['P','P','P','P','P','P','P','S','S','S','S','S','S','S','S','S','S','S','S','S','S'] # List of same length as data_labels, to specify the phase associated with each greens function. Can be "P", "S", or "surface". If this parameter is specified then will use multiple greens function ratios.
 
 
 # ------------------- Define various functions used in script -------------------
@@ -682,7 +683,7 @@ def compare_synth_to_real_waveforms(real_data_array, synth_waveforms_array, comp
     
     return similarity_curr_sample
 
-def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps, return_dict_medium_1_medium_2_rel_amp_ratios, invert_for_ratio_of_multiple_media_greens_func_switch):
+def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps, return_dict_medium_1_medium_2_rel_amp_ratios, invert_for_ratio_of_multiple_media_greens_func_switch, green_func_phase_labels, num_phase_types_for_media_ratios):
     """Parallel worker function for perform_monte_carlo_sampled_waveform_inversion function."""
     print "Processing for process:", procnum, "for ", num_samples_per_processor, "samples."
     
@@ -697,6 +698,12 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
         tmp_medium_1_medium_2_rel_amp_ratios = np.zeros(num_samples_per_processor, dtype=float)
     else:
         tmp_medium_1_medium_2_rel_amp_ratios = []
+    if invert_for_ratio_of_multiple_media_greens_func_switch:
+        if num_phase_types_for_media_ratios>0:
+            tmp_frac_medium_1_diff_phases_dict = {} # Dictionary for temp storing of phase fractions of medium 1
+            tmp_medium_1_medium_2_rel_amp_ratios_multi_phases = np.zeros((num_samples_per_processor, 3), dtype=float)
+        else:
+            tmp_medium_1_medium_2_rel_amp_ratios_multi_phases = []
         
     # Sort greens function storage if processing for multiple media:
     if invert_for_ratio_of_multiple_media_greens_func_switch:
@@ -706,8 +713,22 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     for i in range(num_samples_per_processor):
         # Generate random medium amplitude ratio and associated greens functions (if required):
         if invert_for_ratio_of_multiple_media_greens_func_switch:
-            frac_medium_1 = np.random.uniform(0.0, 1.0)
-            green_func_array = ((2.*frac_medium_1) - 1.)*green_func_array_total_both_media[:,:,:,0] + (1. - frac_medium_1)*green_func_array_total_both_media[:,:,:,1]
+            # If want to invert for ratio of meduim 1 to medium 2 separately for different phases:
+            if num_phase_types_for_media_ratios>0:
+                # Generate different phase fractions:
+                tmp_frac_medium_1_diff_phases_dict["P"] = np.random.uniform(0.0, 1.0)
+                tmp_frac_medium_1_diff_phases_dict["S"] = np.random.uniform(0.0, 1.0)
+                tmp_frac_medium_1_diff_phases_dict["surface"] = np.random.uniform(0.0, 1.0)
+                # Generate associated greens functions:
+                green_func_array = np.zeros(np.shape(green_func_array_total_both_media[:,:,:,0]), dtype=float)
+                # Loop over greens function for each station-phase:
+                for j in range(len(green_func_phase_labels)):
+                    tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                    green_func_array[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array_total_both_media[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array_total_both_media[j,:,:,1]                
+            # Otherwise generate single fraction value and associated greens functions:
+            else:
+                frac_medium_1 = np.random.uniform(0.0, 1.0)
+                green_func_array = ((2.*frac_medium_1) - 1.)*green_func_array_total_both_media[:,:,:,0] + (1. - frac_medium_1)*green_func_array_total_both_media[:,:,:,1]
             
         # 4. Generate synthetic waveform for current sample:
         if inversion_type=="full_mt":
@@ -739,7 +760,12 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             tmp_MT_single_force_rel_amps[i] = random_DC_to_single_force_amp_frac
         if invert_for_ratio_of_multiple_media_greens_func_switch:
-            tmp_medium_1_medium_2_rel_amp_ratios[i] = frac_medium_1
+            if num_phase_types_for_media_ratios>0:
+                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,0] = tmp_frac_medium_1_diff_phases_dict["P"]
+                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,1] = tmp_frac_medium_1_diff_phases_dict["S"]
+                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,2] = tmp_frac_medium_1_diff_phases_dict["surface"]
+            else:
+                tmp_medium_1_medium_2_rel_amp_ratios[i] = frac_medium_1
             
         if i % 10000 == 0:
             print "Processor number:", procnum, "- Processed for",i,"samples out of",num_samples_per_processor,"samples"
@@ -748,10 +774,13 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
     return_dict_MTs[procnum] = tmp_MTs
     return_dict_similarity_values_all_samples[procnum] = tmp_similarity_values_all_samples
     return_dict_MT_single_force_rel_amps[procnum] = tmp_MT_single_force_rel_amps
-    return_dict_medium_1_medium_2_rel_amp_ratios[procnum] = tmp_medium_1_medium_2_rel_amp_ratios
+    if num_phase_types_for_media_ratios>0:
+        return_dict_medium_1_medium_2_rel_amp_ratios[procnum] = tmp_medium_1_medium_2_rel_amp_ratios_multi_phases
+    else:
+        return_dict_medium_1_medium_2_rel_amp_ratios[procnum] = tmp_medium_1_medium_2_rel_amp_ratios
     print "Finished processing process:", procnum, "for ", num_samples_per_processor, "samples."
 
-def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=1, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False):
+def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples=1000, M_amplitude=1.,inversion_type="full_mt",comparison_metric="CC",perform_normallised_waveform_inversion=True, compare_all_waveforms_simultaneously=True, num_processors=1, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_phase_labels=[], num_phase_types_for_media_ratios=0):
     """Function to use random Monte Carlo sampling of the moment tensor to derive a best fit for the moment tensor to the data.
     Notes: Currently does this using M_amplitude (as makes comparison of data realistic) (alternative could be to normalise real and synthetic data).
     Inversion type can be: full_mt, DC or single_force. If it is full_mt or DC, must give 6 greens functions in greeen_func_array. If it is a single force, must use single force greens functions (3).
@@ -767,7 +796,10 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     else:
         MT_single_force_rel_amps = []
     if invert_for_ratio_of_multiple_media_greens_func_switch:
-        medium_1_medium_2_rel_amp_ratios = np.zeros(num_samples, dtype=float)
+        if num_phase_types_for_media_ratios>0:
+            medium_1_medium_2_rel_amp_ratios = np.zeros((num_samples, 3), dtype=float) # To store multi phase amplitude ratios per sample
+        else:
+            medium_1_medium_2_rel_amp_ratios = np.zeros(num_samples, dtype=float) # To store single amplitude ratio per sample
     else:
         medium_1_medium_2_rel_amp_ratios = []
     
@@ -787,7 +819,7 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     num_samples_per_processor = int(num_samples/num_processors)
     # Loop over processes doing smapling:
     for procnum in range(num_processors):
-        p = multiprocessing.Process(target=PARALLEL_worker_mc_inv, args=(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps, return_dict_medium_1_medium_2_rel_amp_ratios, invert_for_ratio_of_multiple_media_greens_func_switch))
+        p = multiprocessing.Process(target=PARALLEL_worker_mc_inv, args=(procnum, num_samples_per_processor, inversion_type, M_amplitude, green_func_array, real_data_array, comparison_metric, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, return_dict_MTs, return_dict_similarity_values_all_samples, return_dict_MT_single_force_rel_amps, return_dict_medium_1_medium_2_rel_amp_ratios, invert_for_ratio_of_multiple_media_greens_func_switch, green_func_phase_labels, num_phase_types_for_media_ratios))
         jobs.append(p) # Append process to list so that can join together later
         p.start() # Start process
     # Join processes back together:
@@ -800,7 +832,12 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             MT_single_force_rel_amps[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_MT_single_force_rel_amps[procnum]
         if invert_for_ratio_of_multiple_media_greens_func_switch:
-            medium_1_medium_2_rel_amp_ratios[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_medium_1_medium_2_rel_amp_ratios[procnum]
+            # If have multi phase amplitude ratios rather than just one multi media amplitude ratio per sample:
+            if len(np.shape(medium_1_medium_2_rel_amp_ratios)) == 2:
+                medium_1_medium_2_rel_amp_ratios[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor), :] = return_dict_medium_1_medium_2_rel_amp_ratios[procnum]
+            # Else if only have one multi media amplitude ratio per sample:
+            else:
+                medium_1_medium_2_rel_amp_ratios[int(procnum*num_samples_per_processor):int((procnum+1)*num_samples_per_processor)] = return_dict_medium_1_medium_2_rel_amp_ratios[procnum]
     # From PARALLEL_worker_mc_inv function, have obtained: MTs, similarity_values_all_samples (and MT_single_force_rel_amps if required)
     
     # 7. Get P(model|data):
@@ -811,7 +848,15 @@ def perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_a
     if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
         MTs = np.vstack((MTs, MT_single_force_rel_amps)) # For passing relative amplitude DC as well as MT and single force components
     if invert_for_ratio_of_multiple_media_greens_func_switch:
-        MTs = np.vstack((MTs, medium_1_medium_2_rel_amp_ratios)) # For passing relative amplitude of medium 1 to medium 2 greens functions
+        # If have multi phase amplitude ratios rather than just one multi media amplitude ratio per sample:
+        if len(np.shape(medium_1_medium_2_rel_amp_ratios)) == 2:
+            # Stack for P, S and surface phase amplitude ratio values:
+            MTs = np.vstack((MTs, medium_1_medium_2_rel_amp_ratios[:,0])) # For passing relative amplitude of medium 1 to medium 2 greens functions
+            MTs = np.vstack((MTs, medium_1_medium_2_rel_amp_ratios[:,1])) # For passing relative amplitude of medium 1 to medium 2 greens functions
+            MTs = np.vstack((MTs, medium_1_medium_2_rel_amp_ratios[:,2])) # For passing relative amplitude of medium 1 to medium 2 greens functions
+        # Else if only have one multi media amplitude ratio per sample:
+        else:
+            MTs = np.vstack((MTs, medium_1_medium_2_rel_amp_ratios)) # For passing relative amplitude of medium 1 to medium 2 greens functions
     
     # Any final additional data returning processing:
     if return_absolute_similarity_values_switch:
@@ -922,6 +967,55 @@ def save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdi
     print "Saving FW inversion to file:", out_fname
     pickle.dump(out_dict, open(out_fname, "wb"))
     
+
+def get_synth_forward_model_most_likely_result(MTs, MTp, green_func_array, inversion_type, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_phase_labels=[], num_phase_types_for_media_ratios=0):
+    """Function to get most likely synth forward model result, based on the inversion outputs.
+    Used for obtaining most likely inversion result information."""
+    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
+        if invert_for_ratio_of_multiple_media_greens_func_switch:
+            if num_phase_types_for_media_ratios>0:
+                # Generate different phase fractions:
+                tmp_frac_medium_1_diff_phases_dict={}
+                tmp_frac_medium_1_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_1_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_1_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                # Create actual greens functions for this solution:
+                green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
+                for j in range(len(green_func_phase_labels)):
+                    tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                    green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                # And get result:
+                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-4, np.where(MTp==np.max(MTp))[0][0]])
+            else:
+                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
+        else:
+            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+    else:
+        if invert_for_ratio_of_multiple_media_greens_func_switch:
+            if num_phase_types_for_media_ratios>0:
+                # Generate different phase fractions:
+                tmp_frac_medium_1_diff_phases_dict={}
+                tmp_frac_medium_1_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_1_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_1_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                # Create actual greens functions for this solution:
+                green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
+                for j in range(len(green_func_phase_labels)):
+                    tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                    green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                # And get result:
+                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-3, np.where(MTp==np.max(MTp))[0][0]])
+            else:
+                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+        else:
+            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
+    
+    return synth_forward_model_most_likely_result_array
+
 def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labels, nlloc_hyp_filename, inversion_type, outdir):
     """Function to save specific waveforms to dictionary format file."""
     # Put waveform data in dict format:
@@ -937,11 +1031,26 @@ def save_specific_waveforms_to_file(real_data_array, synth_data_array, data_labe
     print "Saving FW inversion to file:", out_fname
     pickle.dump(out_wf_dict, open(out_fname, "wb"))
     
-def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0):
+def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0, green_func_phase_labels=[]):
     """Function to run the inversion script."""
     
     # Load input data (completely, for specific inversion type):
     real_data_array, green_func_array = get_overall_real_and_green_func_data(datadir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, inversion_type, manual_indices_time_shift_MT=manual_indices_time_shift_MT, manual_indices_time_shift_SF=manual_indices_time_shift_SF, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_fnames_split_index=green_func_fnames_split_index)
+    
+    # Do initial check/s:
+    if len(green_func_phase_labels)>0:
+        if not len(green_func_array[:,0,0,0]) == len(green_func_phase_labels):
+            print "Error: Greens functions filename array (for medium 1), does not match length of green_func_phase_labels array."
+            sys.exit()
+    
+    # Get number of different phases, if specified:
+    num_phase_types_for_media_ratios = 0
+    if green_func_phase_labels.count("P")>0:
+        num_phase_types_for_media_ratios += 1
+    if green_func_phase_labels.count("S")>0:
+        num_phase_types_for_media_ratios += 1
+    if green_func_phase_labels.count("surface")>0:
+        num_phase_types_for_media_ratios += 1
     
     # Define a fraction of the first medium to use for the simple least squares inversion:
     frac_medium_1 = 0.5
@@ -976,7 +1085,7 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
 
 
     # And do Monte Carlo random sampling to obtain PDF of moment tensor:
-    MTs, MTp, MTp_absolute = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch)
+    MTs, MTp, MTp_absolute = perform_monte_carlo_sampled_waveform_inversion(real_data_array, green_func_array, num_samples, M_amplitude=M_amplitude,inversion_type=inversion_type, comparison_metric=comparison_metric, perform_normallised_waveform_inversion=perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously=compare_all_waveforms_simultaneously, num_processors=num_processors, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_phase_labels=green_func_phase_labels, num_phase_types_for_media_ratios=num_phase_types_for_media_ratios)
 
     # Check that probability of output is non-zero:
     if math.isnan(MTp[0]):
@@ -991,16 +1100,44 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     if plot_switch:
         if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
             if invert_for_ratio_of_multiple_media_greens_func_switch:
-                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
-                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
+                if num_phase_types_for_media_ratios>0:
+                    # Generate different phase fractions:
+                    tmp_frac_medium_1_diff_phases_dict={}
+                    tmp_frac_medium_1_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
+                    tmp_frac_medium_1_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
+                    tmp_frac_medium_1_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                    # Create actual greens functions for this solution:
+                    green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
+                    for j in range(len(green_func_phase_labels)):
+                        tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                        green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                    # And get result:
+                    synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-4, np.where(MTp==np.max(MTp))[0][0]])
+                else:
+                    frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                    green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                    synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
             else:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
         else:
             if invert_for_ratio_of_multiple_media_greens_func_switch:
-                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
-                synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
+                if num_phase_types_for_media_ratios>0:
+                    # Generate different phase fractions:
+                    tmp_frac_medium_1_diff_phases_dict={}
+                    tmp_frac_medium_1_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
+                    tmp_frac_medium_1_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
+                    tmp_frac_medium_1_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                    # Create actual greens functions for this solution:
+                    green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
+                    for j in range(len(green_func_phase_labels)):
+                        tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                        green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                    # And get result:
+                    synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-3, np.where(MTp==np.max(MTp))[0][0]])
+                else:
+                    frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                    green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                    synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
             else:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
         plot_specific_forward_model_result(real_data_array, synth_forward_model_most_likely_result_array, data_labels, plot_title="Most likely Monte Carlo sampled solution", perform_normallised_waveform_inversion=perform_normallised_waveform_inversion)
@@ -1009,32 +1146,22 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     # And save data to MTFIT style file:
     save_to_MTFIT_style_file(MTs, MTp, nlloc_hyp_filename, inversion_type, outdir, MTp_absolute=MTp_absolute) # Saves pickled dictionary containing data from inversion
     # And save most likely solution and real data waveforms to file:
-    if inversion_type == "DC_single_force_couple" or inversion_type == "DC_single_force_no_coupling" or inversion_type == "DC_crack_couple" or inversion_type == "single_force_crack_no_coupling":
-        if invert_for_ratio_of_multiple_media_greens_func_switch:
-            frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-            green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
-            synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
-        else:
-            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
-    else:
-        if invert_for_ratio_of_multiple_media_greens_func_switch:
-            frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-            green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
-            synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
-        else:
-            synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
+    
+    
+    
+    synth_forward_model_most_likely_result_array = get_synth_forward_model_most_likely_result(MTs, MTp, green_func_array, inversion_type, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_phase_labels=green_func_phase_labels, num_phase_types_for_media_ratios=num_phase_types_for_media_ratios)
     save_specific_waveforms_to_file(real_data_array, synth_forward_model_most_likely_result_array, data_labels, nlloc_hyp_filename, inversion_type, outdir)
 
     print "Finished"
         
     
-def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0):
+def run(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=[], cut_phase_length=0, plot_switch=False, num_processors=1, set_pre_time_shift_values_to_zero_switch=True, only_save_non_zero_solns_switch=False, return_absolute_similarity_values_switch=False, invert_for_ratio_of_multiple_media_greens_func_switch=False, green_func_fnames_split_index=0, green_func_phase_labels=[]):
     """Function to run the inversion script."""
 
     # Run specific multi medium inversion, if specified:
     if invert_for_ratio_of_multiple_media_greens_func_switch:
         # For muliple media greens functions:
-        run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, plot_switch=plot_switch, num_processors=num_processors, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch=only_save_non_zero_solns_switch, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_fnames_split_index=green_func_fnames_split_index)
+        run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_fnames, single_force_green_func_fnames, data_labels, inversion_type, perform_normallised_waveform_inversion, compare_all_waveforms_simultaneously, num_samples, comparison_metric, manual_indices_time_shift_MT, manual_indices_time_shift_SF, nlloc_hyp_filename, cut_phase_start_vals=cut_phase_start_vals, cut_phase_length=cut_phase_length, plot_switch=plot_switch, num_processors=num_processors, set_pre_time_shift_values_to_zero_switch=set_pre_time_shift_values_to_zero_switch, only_save_non_zero_solns_switch=only_save_non_zero_solns_switch, return_absolute_similarity_values_switch=return_absolute_similarity_values_switch, invert_for_ratio_of_multiple_media_greens_func_switch=invert_for_ratio_of_multiple_media_greens_func_switch, green_func_fnames_split_index=green_func_fnames_split_index, green_func_phase_labels=green_func_phase_labels)
     else:
         # Run for normal, single set of greens functions:
         
