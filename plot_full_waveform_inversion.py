@@ -1409,6 +1409,12 @@ def plot_wfs_of_most_likely_soln_separate_plot(stations, wfs_dict, plot_fname):
             ax_curr.plot(real_wfs_current_station[j],c='k', alpha=0.6, linewidth=0.75) # Plot real data
             ax_curr.plot(synth_wfs_current_station[j],c='#E83313',linestyle="--", alpha=0.6, linewidth=0.5) # Plot synth data
             ax_curr.set_ylabel(wfs_component_labels_current_station_sorted[j])
+            ax_curr.spines['top'].set_visible(False)
+            ax_curr.spines['right'].set_visible(False)
+            ax_curr.spines['bottom'].set_visible(False)
+            ax_curr.spines['left'].set_visible(False)
+            ax_curr.get_xaxis().set_ticks([])
+            ax_curr.get_yaxis().set_ticks([])
             fig.add_subplot(ax_curr)
         i+=1
     
