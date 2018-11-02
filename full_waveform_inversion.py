@@ -700,7 +700,7 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
         tmp_medium_1_medium_2_rel_amp_ratios = []
     if invert_for_ratio_of_multiple_media_greens_func_switch:
         if num_phase_types_for_media_ratios>0:
-            tmp_frac_medium_1_diff_phases_dict = {} # Dictionary for temp storing of phase fractions of medium 1
+            tmp_frac_medium_2_diff_phases_dict = {} # Dictionary for temp storing of phase fractions of medium 1
             tmp_medium_1_medium_2_rel_amp_ratios_multi_phases = np.zeros((num_samples_per_processor, 3), dtype=float)
         else:
             tmp_medium_1_medium_2_rel_amp_ratios_multi_phases = []
@@ -716,19 +716,19 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
             # If want to invert for ratio of meduim 1 to medium 2 separately for different phases:
             if num_phase_types_for_media_ratios>0:
                 # Generate different phase fractions:
-                tmp_frac_medium_1_diff_phases_dict["P"] = np.random.uniform(0.0, 1.0)
-                tmp_frac_medium_1_diff_phases_dict["S"] = np.random.uniform(0.0, 1.0)
-                tmp_frac_medium_1_diff_phases_dict["surface"] = np.random.uniform(0.0, 1.0)
+                tmp_frac_medium_2_diff_phases_dict["P"] = np.random.uniform(0.0, 1.0)
+                tmp_frac_medium_2_diff_phases_dict["S"] = np.random.uniform(0.0, 1.0)
+                tmp_frac_medium_2_diff_phases_dict["surface"] = np.random.uniform(0.0, 1.0)
                 # Generate associated greens functions:
                 green_func_array = np.zeros(np.shape(green_func_array_total_both_media[:,:,:,0]), dtype=float)
                 # Loop over greens function for each station-phase:
                 for j in range(len(green_func_phase_labels)):
-                    tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
-                    green_func_array[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array_total_both_media[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array_total_both_media[j,:,:,1]                
+                    tmp_frac_medium_2 = tmp_frac_medium_2_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                    green_func_array[j, :, :] = (1. - tmp_frac_medium_2)*green_func_array_total_both_media[j,:,:,0] + tmp_frac_medium_2*green_func_array_total_both_media[j,:,:,1]                
             # Otherwise generate single fraction value and associated greens functions:
             else:
-                frac_medium_1 = np.random.uniform(0.0, 1.0)
-                green_func_array = ((2.*frac_medium_1) - 1.)*green_func_array_total_both_media[:,:,:,0] + (1. - frac_medium_1)*green_func_array_total_both_media[:,:,:,1]
+                frac_medium_2 = np.random.uniform(0.0, 1.0)
+                green_func_array = (1. - frac_medium_2)*green_func_array[:,:,:,0] + frac_medium_2*green_func_array[:,:,:,1]
             
         # 4. Generate synthetic waveform for current sample:
         if inversion_type=="full_mt":
@@ -761,11 +761,11 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
             tmp_MT_single_force_rel_amps[i] = random_DC_to_single_force_amp_frac
         if invert_for_ratio_of_multiple_media_greens_func_switch:
             if num_phase_types_for_media_ratios>0:
-                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,0] = tmp_frac_medium_1_diff_phases_dict["P"]
-                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,1] = tmp_frac_medium_1_diff_phases_dict["S"]
-                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,2] = tmp_frac_medium_1_diff_phases_dict["surface"]
+                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,0] = tmp_frac_medium_2_diff_phases_dict["P"]
+                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,1] = tmp_frac_medium_2_diff_phases_dict["S"]
+                tmp_medium_1_medium_2_rel_amp_ratios_multi_phases[i,2] = tmp_frac_medium_2_diff_phases_dict["surface"]
             else:
-                tmp_medium_1_medium_2_rel_amp_ratios[i] = frac_medium_1
+                tmp_medium_1_medium_2_rel_amp_ratios[i] = frac_medium_2
             
         if i % 10000 == 0:
             print "Processor number:", procnum, "- Processed for",i,"samples out of",num_samples_per_processor,"samples"
@@ -975,20 +975,20 @@ def get_synth_forward_model_most_likely_result(MTs, MTp, green_func_array, inver
         if invert_for_ratio_of_multiple_media_greens_func_switch:
             if num_phase_types_for_media_ratios>0:
                 # Generate different phase fractions:
-                tmp_frac_medium_1_diff_phases_dict={}
-                tmp_frac_medium_1_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
-                tmp_frac_medium_1_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
-                tmp_frac_medium_1_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_2_diff_phases_dict={}
+                tmp_frac_medium_2_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_2_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_2_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
                 # Create actual greens functions for this solution:
                 green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
                 for j in range(len(green_func_phase_labels)):
-                    tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
-                    green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                    tmp_frac_medium_2 = tmp_frac_medium_2_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                    green_func_array_for_most_likely_amp_ratio[j, :, :] = (1. - tmp_frac_medium_2)*green_func_array[j,:,:,0] + tmp_frac_medium_2*green_func_array[j,:,:,1]
                 # And get result:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-4, np.where(MTp==np.max(MTp))[0][0]])
             else:
-                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                frac_medium_2 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                green_func_array_for_most_likely_amp_ratio = (1. - frac_medium_2)*green_func_array[:,:,:,0] + frac_medium_2*green_func_array[:,:,:,1]
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
         else:
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
@@ -996,20 +996,20 @@ def get_synth_forward_model_most_likely_result(MTs, MTp, green_func_array, inver
         if invert_for_ratio_of_multiple_media_greens_func_switch:
             if num_phase_types_for_media_ratios>0:
                 # Generate different phase fractions:
-                tmp_frac_medium_1_diff_phases_dict={}
-                tmp_frac_medium_1_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
-                tmp_frac_medium_1_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
-                tmp_frac_medium_1_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_2_diff_phases_dict={}
+                tmp_frac_medium_2_diff_phases_dict["P"] = MTs[-3, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_2_diff_phases_dict["S"] = MTs[-2, np.where(MTp==np.max(MTp))[0][0]]
+                tmp_frac_medium_2_diff_phases_dict["surface"] = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
                 # Create actual greens functions for this solution:
                 green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
                 for j in range(len(green_func_phase_labels)):
-                    tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
-                    green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                    tmp_frac_medium_2 = tmp_frac_medium_2_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
+                    green_func_array_for_most_likely_amp_ratio[j, :, :] = (1. - tmp_frac_medium_2)*green_func_array[j,:,:,0] + tmp_frac_medium_2*green_func_array[j,:,:,1]
                 # And get result:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-3, np.where(MTp==np.max(MTp))[0][0]])
             else:
-                frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-                green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                frac_medium_2 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
+                green_func_array_for_most_likely_amp_ratio = (1. - frac_medium_2)*green_func_array[:,:,:,0] + frac_medium_2*green_func_array[:,:,:,1]
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
         else:
             synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
@@ -1052,9 +1052,9 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
     if green_func_phase_labels.count("surface")>0:
         num_phase_types_for_media_ratios += 1
     
-    # Define a fraction of the first medium to use for the simple least squares inversion:
-    frac_medium_1 = 0.5
-    green_func_array_for_lsq_inv = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+    # Define a fraction of the second medium to use for the simple least squares inversion:
+    frac_medium_2 = 0.5
+    green_func_array_for_lsq_inv = (1. - frac_medium_2)*green_func_array[:,:,:,0] + frac_medium_2*green_func_array[:,:,:,1]
     
     # Perform the inversion:
     M = perform_inversion(real_data_array, green_func_array_for_lsq_inv)
@@ -1110,12 +1110,12 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
                     green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
                     for j in range(len(green_func_phase_labels)):
                         tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
-                        green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                        green_func_array_for_most_likely_amp_ratio[j, :, :] = (1. - tmp_frac_medium_1)*green_func_array[j,:,:,0] + tmp_frac_medium_1*green_func_array[j,:,:,1]
                     # And get result:
                     synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-4, np.where(MTp==np.max(MTp))[0][0]])
                 else:
                     frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-                    green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                    green_func_array_for_most_likely_amp_ratio = (1. - frac_medium_1)*green_func_array[:,:,:,0] + frac_medium_1*green_func_array[:,:,:,1]
                     synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-2, np.where(MTp==np.max(MTp))[0][0]])
             else:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
@@ -1131,12 +1131,12 @@ def run_multi_medium_inversion(datadir, outdir, real_data_fnames, MT_green_func_
                     green_func_array_for_most_likely_amp_ratio = np.zeros(np.shape(green_func_array[:,:,:,0]), dtype=float)
                     for j in range(len(green_func_phase_labels)):
                         tmp_frac_medium_1 = tmp_frac_medium_1_diff_phases_dict[green_func_phase_labels[j]] # Get fraction for specific phase, for specific greens functions for specific station-phase
-                        green_func_array_for_most_likely_amp_ratio[j, :, :] = ((2.*tmp_frac_medium_1) - 1.)*green_func_array[j,:,:,0] + (1. - tmp_frac_medium_1)*green_func_array[j,:,:,1]
+                        green_func_array_for_most_likely_amp_ratio[j, :, :] = (1. - tmp_frac_medium_1)*green_func_array[j,:,:,0] + tmp_frac_medium_1*green_func_array[j,:,:,1]
                     # And get result:
                     synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-3, np.where(MTp==np.max(MTp))[0][0]])
                 else:
                     frac_medium_1 = MTs[-1, np.where(MTp==np.max(MTp))[0][0]]
-                    green_func_array_for_most_likely_amp_ratio = ((2.*frac_medium_1) - 1.)*green_func_array[:,:,:,0] + (1. - frac_medium_1)*green_func_array[:,:,:,1]
+                    green_func_array_for_most_likely_amp_ratio = (1. - frac_medium_1)*green_func_array[:,:,:,0] + frac_medium_1*green_func_array[:,:,:,1]
                     synth_forward_model_most_likely_result_array = forward_model(green_func_array_for_most_likely_amp_ratio, MTs[:-1, np.where(MTp==np.max(MTp))[0][0]])
             else:
                 synth_forward_model_most_likely_result_array = forward_model(green_func_array, MTs[:, np.where(MTp==np.max(MTp))[0][0]])
