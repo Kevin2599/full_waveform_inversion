@@ -770,6 +770,9 @@ def PARALLEL_worker_mc_inv(procnum, num_samples_per_processor, inversion_type, M
         if i % 10000 == 0:
             print "Processor number:", procnum, "- Processed for",i,"samples out of",num_samples_per_processor,"samples"
     
+    # 7. And convert misfit measure to likelihood function probability:
+    tmp_similarity_values_all_samples = np.exp(-(1.-tmp_similarity_values_all_samples)/2.)
+    
     # And return values back to script:
     return_dict_MTs[procnum] = tmp_MTs
     return_dict_similarity_values_all_samples[procnum] = tmp_similarity_values_all_samples
